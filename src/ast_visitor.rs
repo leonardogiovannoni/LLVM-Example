@@ -117,10 +117,9 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
     }
 
     fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
-        let mut tmp = AST::default();
-        ast.swap2(&mut tmp);
+        let mut tmp = ast.take_ast();
         self.inner_visit(exprs, &mut tmp);
-        ast.swap(&mut tmp);
+        let _ = ast.replace(tmp);
     }
 }
 
@@ -217,10 +216,9 @@ impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
     }
 
     fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
-        let mut tmp = AST::default();
-        ast.swap2(&mut tmp);
+        let mut tmp = ast.take_ast();
         self.inner_visit(exprs, &mut tmp);
-        ast.swap(&mut tmp);
+        let _ = ast.replace(tmp);
     }
 }
 
@@ -298,10 +296,9 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
     }
 
     fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
-        let mut tmp = AST::default();
-        ast.swap2(&mut tmp);
+        let mut tmp = ast.take_ast();
         self.inner_visit(exprs, &mut tmp);
-        ast.swap(&mut tmp);
+        let _ = ast.replace(tmp);
     }
 }
 
