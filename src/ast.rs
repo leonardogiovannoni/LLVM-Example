@@ -1,10 +1,9 @@
-use enum_dispatch::enum_dispatch;
-use derive_more::From;
 use crate::*;
+use derive_more::From;
+use enum_dispatch::enum_dispatch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ExprIndex(pub usize);
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Operator {
@@ -30,8 +29,6 @@ impl BinaryOp {
             op,
         }
     }
-
-  
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -44,7 +41,7 @@ pub enum ValueKind {
 #[derive(Debug, Clone, Default)]
 pub struct Factor<'a> {
     pub kind: ValueKind,
-    pub val: &'a [char]
+    pub val: &'a [char],
 }
 
 impl<'a> Factor<'a> {
@@ -77,9 +74,6 @@ pub enum AST<'a> {
     WithDecl(WithDecl<'a>),
     Index(ExprIndex),
 }
-
-
-
 
 #[enum_dispatch(AST)]
 pub trait ASTTrait<'a> {
@@ -127,7 +121,6 @@ macro_rules! impl_ast {
 }
 
 impl_ast!(BinaryOp, Factor<'a>, WithDecl<'a>, ExprIndex);
-
 
 impl<'a> Default for AST<'a> {
     fn default() -> Self {

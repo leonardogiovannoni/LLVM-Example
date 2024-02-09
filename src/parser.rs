@@ -1,6 +1,5 @@
 use crate::*;
 
-
 pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
     pub token: Token<'a>,
