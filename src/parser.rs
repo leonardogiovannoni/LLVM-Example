@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
         Some(vars)
     }
 
-    pub fn parse_calc_mid(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<AST<'a>> {
+    pub fn parse_calc_mid(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<Ast<'a>> {
         let vars = self.parse_calc_begin()?;
         let e = self.parse_expr(exprs)?;
         if self.expect(TokenKind::Eoi) {
@@ -82,7 +82,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_calc(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<AST<'a>> {
+    pub fn parse_calc(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<Ast<'a>> {
         self.parse_calc_mid(exprs).or_else(|| {
             while self.token.kind != TokenKind::Eoi {
                 self.advance();
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
         res
     }
 
-    pub fn parse(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<AST<'a>> {
+    pub fn parse(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<Ast<'a>> {
         let ast = self.parse_calc(exprs);
         let _ = self.expect(TokenKind::Eoi);
         ast

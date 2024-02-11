@@ -69,47 +69,47 @@ impl<'a> WithDecl<'a> {
 
 #[derive(Debug)]
 #[enum_dispatch]
-pub enum AST<'a> {
+pub enum Ast<'a> {
     BinaryOp(BinaryOp),
     Factor(Factor<'a>),
     WithDecl(WithDecl<'a>),
     Index(ExprIndex),
 }
 
-#[enum_dispatch(AST)]
-pub trait ASTTrait<'a> {
-    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) -> Result<()>;
-    fn swap(&mut self, ast: &mut AST<'a>);
-    fn take(&mut self) -> AST<'a>;
-    fn replace(&mut self, ast: AST<'a>) -> AST<'a>;
+#[enum_dispatch(Ast)]
+pub trait AstTrait<'a> {
+    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()>;
+    fn swap(&mut self, ast: &mut Ast<'a>);
+    fn take(&mut self) -> Ast<'a>;
+    fn replace(&mut self, ast: Ast<'a>) -> Ast<'a>;
 }
 
 macro_rules! impl_ast {
     ($($t:ty),*) => {
         $(
-            impl<'a> ASTTrait<'a> for $t {
+            impl<'a> AstTrait<'a> for $t {
 
-                fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) -> Result<()> {
+                fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
                     v.visit(exprs, self)
                 }
 
-                fn swap(&mut self, ast: &mut AST<'a>) {
+                fn swap(&mut self, ast: &mut Ast<'a>) {
                     let s = std::mem::take(self);
-                    let ss = AST::from(s);
+                    let ss = Ast::from(s);
                     let a = std::mem::take(ast);
                     *self = a.try_into().unwrap();
                     *ast = ss;
                 }
 
-                fn take(&mut self) -> AST<'a> {
-                    let mut ast = AST::from(<$t>::default());
+                fn take(&mut self) -> Ast<'a> {
+                    let mut ast = Ast::from(<$t>::default());
                     let s = std::mem::take(self);
                     let a = std::mem::take(&mut ast);
                     *self = a.try_into().unwrap();
                     s.into()
                 }
 
-                fn replace(&mut self, ast: AST<'a>) -> AST<'a> {
+                fn replace(&mut self, ast: Ast<'a>) -> Ast<'a> {
                     let s = std::mem::take(self);
                     *self = ast.try_into().unwrap();
                     s.into()
@@ -121,8 +121,8 @@ macro_rules! impl_ast {
 
 impl_ast!(BinaryOp, Factor<'a>, WithDecl<'a>, ExprIndex);
 
-impl<'a> Default for AST<'a> {
+impl<'a> Default for Ast<'a> {
     fn default() -> Self {
-        AST::Index(ExprIndex::default())
+        Ast::Index(ExprIndex::default())
     }
 }

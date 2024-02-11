@@ -19,7 +19,7 @@ use std::rc::Rc;
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic<'a>(&self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> bool {
+    pub fn semantic<'a>(&self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> bool {
         let mut check = DeclCheck::new();
         ast.accept(exprs, &mut check).unwrap();
         check.has_error
@@ -35,7 +35,7 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, exprs: &mut Vec<Expr<'a>>, mut ast: AST<'a>) {
+    pub fn compile(&self, exprs: &mut Vec<Expr<'a>>, mut ast: Ast<'a>) {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));

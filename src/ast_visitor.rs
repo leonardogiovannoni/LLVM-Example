@@ -13,21 +13,21 @@ use anyhow::{bail, Result};
 
 #[derive(Debug)]
 #[enum_dispatch]
-pub enum ASTVisitor<'a> {
+pub enum AstVisitor<'a> {
     DeclCheck(DeclCheck<'a>),
     ToIRVisitor(ToIRVisitor<'a>),
 }
 
-impl<'a> Default for ASTVisitor<'a> {
+impl<'a> Default for AstVisitor<'a> {
     fn default() -> Self {
-        ASTVisitor::DeclCheck(DeclCheck::new())
+        AstVisitor::DeclCheck(DeclCheck::new())
     }
 }
 
-#[enum_dispatch(ASTVisitor)]
-pub trait ASTVisitorTrait<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()>;
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()>;
+#[enum_dispatch(AstVisitor)]
+pub trait AstVisitorTrait<'a> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>;
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             name_map: Default::default(),
         }
     }
-    pub fn run(&mut self, exprs: &mut Vec<Expr<'ctx>>, tree: &mut AST<'ctx>) -> Result<()> {
+    pub fn run(&mut self, exprs: &mut Vec<Expr<'ctx>>, tree: &mut Ast<'ctx>) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
@@ -93,10 +93,10 @@ impl<'a> Default for ToIRVisitor<'a> {
     }
 }
 
-impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()>{
+impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>{
         match ast {
-            AST::BinaryOp(node) => {
+            Ast::BinaryOp(node) => {
                 let Some((left_idx, left)) = node
                     .lhs_expr
                     .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
@@ -142,7 +142,7 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     "",
                 )?.into();
             }
-            AST::Factor(factor) => {
+            Ast::Factor(factor) => {
                 match factor.kind {
                     ValueKind::Ident => {
                         let val = factor.val.iter().collect::<String>();
@@ -159,7 +159,7 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     }
                 }
             }
-            AST::WithDecl(node) => {
+            Ast::WithDecl(node) => {
                 let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
                 let read_fn =
                     self.module
@@ -195,12 +195,12 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     }
                 }
             }
-            AST::Index(_) => {}
+            Ast::Index(_) => {}
         }
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -239,10 +239,10 @@ impl<'a> DeclCheck<'a> {
     }
 }
 
-impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut AST<'a>) -> Result<()>{
+impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut Ast<'a>) -> Result<()>{
         match node {
-            AST::BinaryOp(node) => {
+            Ast::BinaryOp(node) => {
                 // TODO: check for existence of ExprIndex in exprs
                 for scan in [node.lhs_expr, node.rhs_expr].iter_mut() {
                     if let Some(mut expr) = scan {
@@ -252,12 +252,12 @@ impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
                     }
                 }
             }
-            AST::Factor(node) => {
+            Ast::Factor(node) => {
                 if node.kind == ValueKind::Ident && !self.scope.contains(node.val) {
                     self.error(ErrorType::Not, node.val);
                 }
             }
-            AST::WithDecl(node) => {
+            Ast::WithDecl(node) => {
                 for &i in &node.vars {
                     if self.scope.contains(i) {
                         self.error(ErrorType::Twice, i);
@@ -272,12 +272,12 @@ impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
                     self.has_error = true;
                 }
             }
-            AST::Index(_) => {}
+            Ast::Index(_) => {}
         }
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);

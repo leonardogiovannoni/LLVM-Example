@@ -14,36 +14,36 @@ impl<'a> Default for Expr<'a> {
     }
 }
 
-impl<'a> ASTTrait<'a> for Expr<'a> {
-    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) -> Result<()> {
+impl<'a> AstTrait<'a> for Expr<'a> {
+    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
         match self {
-            Expr::BinaryOp(ast) => ASTTrait::accept(ast, exprs, v),
-            Expr::Factor(ast) => ASTTrait::accept(ast, exprs, v),
+            Expr::BinaryOp(ast) => AstTrait::accept(ast, exprs, v),
+            Expr::Factor(ast) => AstTrait::accept(ast, exprs, v),
         }
     }
 
-    fn swap(&mut self, ast: &mut AST<'a>) {
+    fn swap(&mut self, ast: &mut Ast<'a>) {
         match self {
             Expr::BinaryOp(b) => {
-                ASTTrait::swap(b, ast);
+                AstTrait::swap(b, ast);
             }
             Expr::Factor(f) => {
-                ASTTrait::swap(f, ast);
+                AstTrait::swap(f, ast);
             }
         }
     }
 
-    fn take(&mut self) -> AST<'a> {
+    fn take(&mut self) -> Ast<'a> {
         match self {
-            Expr::BinaryOp(b) => ASTTrait::take(b),
-            Expr::Factor(f) => ASTTrait::take(f),
+            Expr::BinaryOp(b) => AstTrait::take(b),
+            Expr::Factor(f) => AstTrait::take(f),
         }
     }
 
-    fn replace(&mut self, ast: AST<'a>) -> AST<'a> {
+    fn replace(&mut self, ast: Ast<'a>) -> Ast<'a> {
         match self {
-            Expr::BinaryOp(b) => ASTTrait::replace(b, ast),
-            Expr::Factor(f) => ASTTrait::replace(f, ast),
+            Expr::BinaryOp(b) => AstTrait::replace(b, ast),
+            Expr::Factor(f) => AstTrait::replace(f, ast),
         }
     }
 }

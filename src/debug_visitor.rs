@@ -1,12 +1,12 @@
 use crate::*;
 use anyhow::Result;
-struct DebugASTVisitor<'a> {
+struct DebugAstVisitor<'a> {
     phantom: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> DebugASTVisitor<'a> {
-    fn new() -> DebugASTVisitor<'a> {
-        DebugASTVisitor {
+impl<'a> DebugAstVisitor<'a> {
+    fn new() -> DebugAstVisitor<'a> {
+        DebugAstVisitor {
             phantom: std::marker::PhantomData,
         }
     }
@@ -43,10 +43,10 @@ impl<'a> DebugASTVisitor<'a> {
     }
 }
 
-impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()> {
+impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()> {
         match ast {
-            AST::BinaryOp(bin_op) => {
+            Ast::BinaryOp(bin_op) => {
                 let lhs = bin_op
                     .lhs_expr
                     .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
@@ -62,12 +62,12 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
                 let op = format!("{:?}", bin_op.op);
                 println!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op);
             }
-            AST::Factor(factor) => {
+            Ast::Factor(factor) => {
                 let val = factor.val.iter().collect::<String>();
                 let kind = format!("{:?}", factor.kind);
                 println!("Factor(kind: {}, val: {})", kind, val);
             }
-            AST::WithDecl(with_decl) => {
+            Ast::WithDecl(with_decl) => {
                 let vars = with_decl
                     .vars
                     .iter()
@@ -82,7 +82,7 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
                 let vars = format!("{:?}", vars);
                 println!("WithDecl(vars: {}, expr: {})", vars, expr);
             }
-            AST::Index(index) => {
+            Ast::Index(index) => {
                 let index = format!("{:?}", index.0);
                 println!("Index({})", index);
             }
@@ -90,7 +90,7 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -98,7 +98,7 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
     }
 }
 
-pub fn debug_ast<'a>(ast: &mut AST<'a>, exprs: &mut Vec<Expr<'a>>) {
-    let mut visitor = DebugASTVisitor::new();
+pub fn debug_ast<'a>(ast: &mut Ast<'a>, exprs: &mut Vec<Expr<'a>>) {
+    let mut visitor = DebugAstVisitor::new();
     visitor.visit(exprs, ast).unwrap();
 }
