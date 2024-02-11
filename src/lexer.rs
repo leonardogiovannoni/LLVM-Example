@@ -1,13 +1,13 @@
 use crate::*;
 pub struct Lexer<'a> {
-    buffer_start: &'a [char],
+    //buffer_start: &'a [char],
     buffer_ptr: &'a [char],
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a [char]) -> Lexer<'a> {
         Lexer {
-            buffer_start: input,
+            //buffer_start: input,
             buffer_ptr: input,
         }
     }

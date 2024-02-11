@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use enum_dispatch::enum_dispatch;
 use inkwell::{
-    builder::{Builder, BuilderError},
+    builder::Builder,
     module::{Linkage, Module},
-    values::{BasicValueEnum, IntValue},
+    values::BasicValueEnum,
     AddressSpace,
 };
 
@@ -236,10 +236,6 @@ impl<'a> DeclCheck<'a> {
         };
         println!("Variable {:?} is {} declared", s, tmp);
         self.has_error = true;
-    }
-
-    pub fn check(&self, _ast: AST<'a>) -> bool {
-        self.has_error
     }
 }
 
