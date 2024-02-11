@@ -47,18 +47,13 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()> {
         match ast {
             Ast::BinaryOp(bin_op) => {
-                let lhs = bin_op
-                    .lhs_expr
-                    .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
-                let rhs = bin_op
-                    .rhs_expr
-                    .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
-                let lhs = lhs
-                    .map(|lhs| format!("Some({})", lhs))
-                    .unwrap_or_else(|| "None".to_string());
-                let rhs = rhs
-                    .map(|rhs| format!("Some({})", rhs))
-                    .unwrap_or_else(|| "None".to_string());
+                let get_pretty_name = |idx: Option<ExprIndex>| {
+                    idx.map(|idx| self.resolve_and_format_expr_index(exprs, idx))
+                        .map(|expr| format!("Some({})", expr))
+                        .unwrap_or_else(|| "None".to_string())
+                };
+                let lhs = get_pretty_name(bin_op.lhs_expr);
+                let rhs = get_pretty_name(bin_op.rhs_expr);
                 let op = format!("{:?}", bin_op.op);
                 println!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op);
             }
