@@ -102,7 +102,7 @@ impl<'a> Parser<'a> {
             self.advance();
             let right = self.parse_term(exprs);
             let binary_op = BinaryOp::new(left, right, op);
-            exprs.push(binary_op.into());
+            exprs.push(Expr::BinaryOp(binary_op));
             left = Some(ExprIndex(exprs.len() - 1));
         }
         left
@@ -128,12 +128,12 @@ impl<'a> Parser<'a> {
         let mut res = None;
         match self.token.kind {
             TokenKind::Ident => {
-                exprs.push(Factor::new(ValueKind::Ident, self.token.text).into());
+                exprs.push(Expr::Factor(Factor::new(ValueKind::Ident, self.token.text)));
                 res = Some(ExprIndex(exprs.len() - 1));
                 self.advance();
             }
             TokenKind::Number => {
-                exprs.push(Factor::new(ValueKind::Number, self.token.text).into());
+                exprs.push(Expr::Factor(Factor::new(ValueKind::Number, self.token.text))   );
                 res = Some(ExprIndex(exprs.len() - 1));
                 self.advance();
             }

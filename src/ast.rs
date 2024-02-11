@@ -1,6 +1,7 @@
 use crate::*;
 
 use enum_dispatch::enum_dispatch;
+use anyhow::Result;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ExprIndex(pub usize);
@@ -77,7 +78,7 @@ pub enum AST<'a> {
 
 #[enum_dispatch(AST)]
 pub trait ASTTrait<'a> {
-    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>);
+    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) -> Result<()>;
     fn swap(&mut self, ast: &mut AST<'a>);
     fn take(&mut self) -> AST<'a>;
     fn replace(&mut self, ast: AST<'a>) -> AST<'a>;
@@ -88,8 +89,8 @@ macro_rules! impl_ast {
         $(
             impl<'a> ASTTrait<'a> for $t {
 
-                fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) {
-                    v.visit(exprs, self);
+                fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>) -> Result<()> {
+                    v.visit(exprs, self)
                 }
 
                 fn swap(&mut self, ast: &mut AST<'a>) {

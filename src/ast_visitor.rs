@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use enum_dispatch::enum_dispatch;
 use inkwell::{
-    builder::Builder,
+    builder::{Builder, BuilderError},
     module::{Linkage, Module},
-    values::{BasicValueEnum, IntMathValue},
+    values::{BasicValueEnum, IntValue},
     AddressSpace,
 };
 
 use crate::*;
+use anyhow::{bail, Result};
 
 #[derive(Debug)]
 #[enum_dispatch]
@@ -25,8 +26,8 @@ impl<'a> Default for ASTVisitor<'a> {
 
 #[enum_dispatch(ASTVisitor)]
 pub trait ASTVisitorTrait<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>);
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>);
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()>;
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -40,7 +41,6 @@ pub struct ToIRVisitor<'ctx> {
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: BasicValueEnum<'ctx>,
     name_map: HashMap<String, BasicValueEnum<'ctx>>,
-    _phantom: std::marker::PhantomData<&'ctx ()>,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
@@ -61,10 +61,9 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_zero,
             v: int32_zero.into(),
             name_map: Default::default(),
-            _phantom: std::marker::PhantomData,
         }
     }
-    pub fn run(&mut self, exprs: &mut Vec<Expr<'ctx>>, tree: &mut AST<'ctx>) {
+    pub fn run(&mut self, exprs: &mut Vec<Expr<'ctx>>, tree: &mut AST<'ctx>) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
@@ -74,17 +73,17 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let entry = self.context.append_basic_block(main_fn, "entry");
         self.builder.position_at_end(entry);
 
-        tree.accept(exprs, self);
+        tree.accept(exprs, self)?;
 
         let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
         let calc_write_fn =
             self.module
                 .add_function("calc_write", calc_write_fn_type, Some(Linkage::External));
         self.builder
-            .build_call(calc_write_fn, &[self.v.into()], "call_calc_write")
-            .unwrap();
+            .build_call(calc_write_fn, &[self.v.into()], "call_calc_write")?;
 
-        self.builder.build_return(Some(&self.int32_zero)).unwrap();
+        self.builder.build_return(Some(&self.int32_zero))?;
+        Ok(())
     }
 }
 
@@ -95,63 +94,53 @@ impl<'a> Default for ToIRVisitor<'a> {
 }
 
 impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) {
-        let ast_owned = std::mem::take(ast);
-        *ast = match ast_owned {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()>{
+        match ast {
             AST::BinaryOp(node) => {
-                if let Some(left_idx) = node.lhs_expr {
-                    let left = exprs.get_mut(left_idx.0).unwrap();
-                    let mut l = std::mem::take(left);
-                    l.accept(exprs, self);
-                    exprs[left_idx.0] = l;
-                    let left = self.v;
-                    if let Some(right_idx) = node.rhs_expr {
-                        let right = exprs.get_mut(right_idx.0).unwrap();
-                        let mut r = std::mem::take(right);
-                        r.accept(exprs, self);
-                        exprs[right_idx.0] = r;
-                        let right = self.v;
-                        self.v = match node.op {
-                            Operator::Plus => self
-                                .builder
-                                .build_int_nsw_add(
-                                    left.into_int_value(),
-                                    right.into_int_value(),
-                                    "",
-                                )
-                                .unwrap()
-                                .into(),
-                            Operator::Minus => self
-                                .builder
-                                .build_int_nsw_sub(
-                                    left.into_int_value(),
-                                    right.into_int_value(),
-                                    "",
-                                )
-                                .unwrap()
-                                .into(),
-                            Operator::Mul => self
-                                .builder
-                                .build_int_nsw_mul(
-                                    left.into_int_value(),
-                                    right.into_int_value(),
-                                    "",
-                                )
-                                .unwrap()
-                                .into(),
-                            Operator::Div => self
-                                .builder
-                                .build_int_signed_div(
-                                    left.into_int_value(),
-                                    right.into_int_value(),
-                                    "",
-                                )
-                                .unwrap()
-                                .into(),
-                        }
-                    }
+                let Some((left_idx, left)) = node
+                    .lhs_expr
+                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
+                    .flatten()
+                else {
+                    todo!()
+                };
+
+                let mut l = std::mem::take(left);
+                let res = l.accept(exprs, self);
+                exprs[left_idx] = l;
+                if res.is_err() {
+                    return res;
                 }
-                node.into()
+                let left = self.v;
+
+                let Some((right_idx, right)) = node
+                    .rhs_expr
+                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
+                    .flatten()
+                else {
+                    todo!()
+                };
+
+                let mut r = std::mem::take(right);
+                let res = r.accept(exprs, self);
+                exprs[right_idx] = r;
+                if res.is_err() {
+                    return res;
+                }
+                let right = self.v;
+                
+                let op = match node.op {
+                    Operator::Plus => Builder::build_int_nsw_add,
+                    Operator::Minus => Builder::build_int_nsw_sub,
+                    Operator::Mul => Builder::build_int_nsw_mul,
+                    Operator::Div => Builder::build_int_signed_div,
+                };
+                self.v = op(
+                    &self.builder,
+                    left.into_int_value(),
+                    right.into_int_value(),
+                    "",
+                )?.into();
             }
             AST::Factor(factor) => {
                 match factor.kind {
@@ -169,14 +158,13 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                         self.v = self.int32_ty.const_int(intval as u64, true).into();
                     }
                 }
-                factor.into()
             }
             AST::WithDecl(node) => {
                 let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
                 let read_fn =
                     self.module
                         .add_function("calc_read", read_ftype, Some(Linkage::External));
-                
+
                 for var in &node.vars {
                     let var = var.iter().collect::<String>();
                     let str_val = self.context.const_string(var.as_bytes(), true);
@@ -190,33 +178,33 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     global_str.set_initializer(&str_val);
                     global_str.set_linkage(Linkage::Private);
                     global_str.set_constant(true);
+
                     let call = self
                         .builder
-                        .build_call(
-                            read_fn,
-                            &[global_str.as_pointer_value().into()],
-                            "",
-                        )
-                        .unwrap();
+                        .build_call(read_fn, &[global_str.as_pointer_value().into()], "")?;
                     self.name_map
                         .insert(var, call.try_as_basic_value().left().unwrap());
                 }
                 if let Some(expr) = node.expr_index {
                     let e = exprs.get_mut(expr.0).unwrap();
                     let mut e = std::mem::take(e);
-                    e.accept(exprs, self);
+                    let res = e.accept(exprs, self);
                     exprs[expr.0] = e;
+                    if res.is_err() {
+                        return res;
+                    }
                 }
-                node.into()
             }
-            AST::Index(index) => index.into(),
+            AST::Index(_) => {}
         }
+        Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
-        self.inner_visit(exprs, &mut tmp);
+        let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
+        res
     }
 }
 
@@ -256,19 +244,16 @@ impl<'a> DeclCheck<'a> {
 }
 
 impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut AST<'a>) {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut AST<'a>) -> Result<()>{
         match node {
             AST::BinaryOp(node) => {
                 // TODO: check for existence of ExprIndex in exprs
-                if let Some(mut left) = node.lhs_expr {
-                    left.accept(exprs, self);
-                } else {
-                    self.has_error = true;
-                }
-                if let Some(mut right) = node.rhs_expr {
-                    right.accept(exprs, self);
-                } else {
-                    self.has_error = true;
+                for scan in [node.lhs_expr, node.rhs_expr].iter_mut() {
+                    if let Some(mut expr) = scan {
+                        expr.accept(exprs, self)?;
+                    } else {
+                        self.has_error = true;
+                    }
                 }
             }
             AST::Factor(node) => {
@@ -280,24 +265,26 @@ impl<'a> ASTVisitorTrait<'a> for DeclCheck<'a> {
                 for &i in &node.vars {
                     if self.scope.contains(i) {
                         self.error(ErrorType::Twice, i);
-                        return;
+                        bail!("Variable declared twice");
                     }
                     self.scope.insert(i);
                 }
 
                 if let Some(mut expr) = node.expr_index {
-                    expr.accept(exprs, self);
+                    expr.accept(exprs, self)?;
                 } else {
                     self.has_error = true;
                 }
             }
             AST::Index(_) => {}
         }
+        Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
-        self.inner_visit(exprs, &mut tmp);
+        let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
+        res
     }
 }

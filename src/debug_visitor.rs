@@ -1,4 +1,5 @@
 use crate::*;
+use anyhow::Result;
 struct DebugASTVisitor<'a> {
     phantom: std::marker::PhantomData<&'a ()>,
 }
@@ -43,7 +44,7 @@ impl<'a> DebugASTVisitor<'a> {
 }
 
 impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> Result<()> {
         match ast {
             AST::BinaryOp(bin_op) => {
                 let lhs = bin_op
@@ -86,16 +87,18 @@ impl<'a> ASTVisitorTrait<'a> for DebugASTVisitor<'a> {
                 println!("Index({})", index);
             }
         }
+        Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) {
+    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn ASTTrait<'a>) -> Result<()> {
         let mut tmp = ast.take();
-        self.inner_visit(exprs, &mut tmp);
+        let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
+        res
     }
 }
 
 pub fn debug_ast<'a>(ast: &mut AST<'a>, exprs: &mut Vec<Expr<'a>>) {
     let mut visitor = DebugASTVisitor::new();
-    visitor.visit(exprs, ast);
+    visitor.visit(exprs, ast).unwrap();
 }
