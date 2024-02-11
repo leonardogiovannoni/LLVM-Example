@@ -79,10 +79,8 @@ pub enum AST<'a> {
 pub trait ASTTrait<'a> {
     fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn ASTVisitorTrait<'a>);
     fn swap(&mut self, ast: &mut AST<'a>);
-    fn take_ast(&mut self) -> AST<'a>;
+    fn take(&mut self) -> AST<'a>;
     fn replace(&mut self, ast: AST<'a>) -> AST<'a>;
-
-    //fn swap2(&mut self, ast: &mut AST<'a>);
 }
 
 macro_rules! impl_ast {
@@ -102,7 +100,7 @@ macro_rules! impl_ast {
                     *ast = ss;
                 }
 
-                fn take_ast(&mut self) -> AST<'a> {
+                fn take(&mut self) -> AST<'a> {
                     let mut ast = AST::from(<$t>::default());
                     let s = std::mem::take(self);
                     let a = std::mem::take(&mut ast);

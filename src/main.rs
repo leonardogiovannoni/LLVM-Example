@@ -4,35 +4,39 @@ mod expr;
 mod lexer;
 mod parser;
 mod token;
-
+mod debug_visitor;
 use crate::ast::*;
 use crate::ast_visitor::*;
 use crate::expr::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
+use crate::debug_visitor::*;
 use inkwell::context::Context;
 use std::collections::HashSet;
+use std::rc::Rc;
 
 pub struct Sema;
 
 impl Sema {
     pub fn semantic<'a>(&self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) -> bool {
-        let check = DeclCheck::new();
-        let mut check = ASTVisitor::DeclCheck(check);
+        let mut check = DeclCheck::new();
         ast.accept(exprs, &mut check);
-        true
+        check.has_error
     }
 }
 
 pub struct CodeGen;
 
 impl CodeGen {
-    pub fn compile<'a>(&self, _exprs: &mut Vec<Expr<'a>>, _ast: AST<'a>) {
-        let ctx = Context::create();
-        let _i32_type = ctx.i32_type();
-        let _module = ctx.create_module("calc.expr");
-        todo!();
+    pub fn compile<'a>(&self, exprs: &mut Vec<Expr<'a>>, mut ast: AST<'a>) {
+        let ctx = Box::leak(Box::new(Context::create()));
+        let module = ctx.create_module("calc.expr");
+        let module = Rc::new(module);
+        let mut to_ir = ToIRVisitor::new(ctx, Rc::clone(&module));
+        to_ir.run(exprs, &mut ast);
+        module.print_to_stderr();
+
     }
 }
 
@@ -50,7 +54,12 @@ fn main() {
     let Some(mut ast) = ast else {
         return;
     };
-    debug_ast(&mut ast, &mut exprs);
+    //debug_ast(&mut ast, &mut exprs);
     let semantic = Sema;
-    if !semantic.semantic(&mut exprs, &mut ast) {}
+    if semantic.semantic(&mut exprs, &mut ast) {
+        println!("semantic error");
+        return;
+    }
+    let codegen = CodeGen;
+    codegen.compile(&mut exprs, ast);
 }
