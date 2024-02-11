@@ -94,18 +94,41 @@ impl<'a> Default for ToIRVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>{
         match ast {
             Ast::BinaryOp(node) => {
-                node.lhs_expr
-                    .ok_or(anyhow::anyhow!("lhs_expr is None"))?
-                    .accept(exprs, self)?;
-                let left = self.v;
-                node.rhs_expr
-                    .ok_or(anyhow::anyhow!("rhs_expr is None"))?
-                    .accept(exprs, self)?;
-                let right = self.v;
+                let Some((left_idx, left)) = node
+                    .lhs_expr
+                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
+                    .flatten()
+                else {
+                    todo!()
+                };
 
+                let mut l = std::mem::take(left);
+                let res = l.accept(exprs, self);
+                exprs[left_idx] = l;
+                if res.is_err() {
+                    return res;
+                }
+                let left = self.v;
+
+                let Some((right_idx, right)) = node
+                    .rhs_expr
+                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
+                    .flatten()
+                else {
+                    todo!()
+                };
+
+                let mut r = std::mem::take(right);
+                let res = r.accept(exprs, self);
+                exprs[right_idx] = r;
+                if res.is_err() {
+                    return res;
+                }
+                let right = self.v;
+                
                 let op = match node.op {
                     Operator::Plus => Builder::build_int_nsw_add,
                     Operator::Minus => Builder::build_int_nsw_sub,
@@ -117,24 +140,25 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     left.into_int_value(),
                     right.into_int_value(),
                     "",
-                )?
-                .into();
+                )?.into();
             }
-            Ast::Factor(factor) => match factor.kind {
-                ValueKind::Ident => {
-                    let val = factor.val.iter().collect::<String>();
-                    if let Some(val) = self.name_map.get(&val) {
-                        self.v = *val;
-                    } else {
-                        panic!("Variable not found");
+            Ast::Factor(factor) => {
+                match factor.kind {
+                    ValueKind::Ident => {
+                        let val = factor.val.iter().collect::<String>();
+                        if let Some(val) = self.name_map.get(&val) {
+                            self.v = *val;
+                        } else {
+                            panic!("Variable not found");
+                        }
+                    }
+                    _ => {
+                        let val = factor.val.iter().collect::<String>();
+                        let intval = val.parse::<i64>().expect("Invalid integer");
+                        self.v = self.int32_ty.const_int(intval as u64, true).into();
                     }
                 }
-                _ => {
-                    let val = factor.val.iter().collect::<String>();
-                    let intval = val.parse::<i64>().expect("Invalid integer");
-                    self.v = self.int32_ty.const_int(intval as u64, true).into();
-                }
-            },
+            }
             Ast::WithDecl(node) => {
                 let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
                 let read_fn =
@@ -155,16 +179,20 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     global_str.set_linkage(Linkage::Private);
                     global_str.set_constant(true);
 
-                    let call = self.builder.build_call(
-                        read_fn,
-                        &[global_str.as_pointer_value().into()],
-                        "",
-                    )?;
+                    let call = self
+                        .builder
+                        .build_call(read_fn, &[global_str.as_pointer_value().into()], "")?;
                     self.name_map
                         .insert(var, call.try_as_basic_value().left().unwrap());
                 }
-                if let Some(mut expr) = node.expr_index {
-                    expr.accept(exprs, self)?;
+                if let Some(expr) = node.expr_index {
+                    let e = exprs.get_mut(expr.0).unwrap();
+                    let mut e = std::mem::take(e);
+                    let res = e.accept(exprs, self);
+                    exprs[expr.0] = e;
+                    if res.is_err() {
+                        return res;
+                    }
                 }
             }
             Ast::Index(_) => {}
@@ -212,7 +240,7 @@ impl<'a> DeclCheck<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut Ast<'a>) -> Result<()> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut Ast<'a>) -> Result<()>{
         match node {
             Ast::BinaryOp(node) => {
                 // TODO: check for existence of ExprIndex in exprs
