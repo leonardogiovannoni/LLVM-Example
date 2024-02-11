@@ -19,18 +19,13 @@ impl<'a> DebugAstVisitor<'a> {
     fn format_expr(&self, exprs: &[Expr<'a>], expr: &Expr<'a>) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
-                let lhs = bin_op
-                    .lhs_expr
-                    .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
-                let rhs = bin_op
-                    .rhs_expr
-                    .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
-                let lhs = lhs
-                    .map(|lhs| format!("Some({})", lhs))
-                    .unwrap_or_else(|| "None".to_string());
-                let rhs = rhs
-                    .map(|rhs| format!("Some({})", rhs))
-                    .unwrap_or_else(|| "None".to_string());
+                let resolve_fn = |idx: Option<ExprIndex>| {
+                    idx.map(|idx| self.resolve_and_format_expr_index(exprs, idx))
+                        .map(|expr| format!("Some({})", expr))
+                        .unwrap_or_else(|| "None".to_string())
+                };
+                let lhs = resolve_fn(bin_op.lhs_expr);
+                let rhs = resolve_fn(bin_op.rhs_expr);
                 let op = format!("{:?}", bin_op.op);
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
