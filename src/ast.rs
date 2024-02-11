@@ -15,7 +15,7 @@ pub enum Operator {
     Div,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct BinaryOp {
     pub lhs_expr: Option<ExprIndex>,
     pub rhs_expr: Option<ExprIndex>,
@@ -39,7 +39,7 @@ pub enum ValueKind {
     Number,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Factor<'a> {
     pub kind: ValueKind,
     pub val: &'a [char],
@@ -51,7 +51,7 @@ impl<'a> Factor<'a> {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct WithDecl<'a> {
     pub vars: Vec<&'a [char]>,
     pub expr_index: Option<ExprIndex>,

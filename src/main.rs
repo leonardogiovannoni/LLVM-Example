@@ -45,7 +45,7 @@ impl<'a> CodeGen<'a> {
 }
 
 fn main() {
-    let input = std::env::args().skip(1).next().expect("no input");
+    let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
     let lexer = Lexer::new(&input);
     let mut parser = Parser::new(lexer);

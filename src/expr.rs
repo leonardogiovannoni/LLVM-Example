@@ -1,7 +1,7 @@
 use crate::*;
 use enum_dispatch::enum_dispatch;
 use anyhow::Result;
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[enum_dispatch]
 pub enum Expr<'a> {
     BinaryOp(BinaryOp),
