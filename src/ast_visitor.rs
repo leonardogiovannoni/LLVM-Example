@@ -32,7 +32,7 @@ pub trait ASTVisitorTrait<'a> {
 
 #[derive(Debug)]
 pub struct ToIRVisitor<'ctx> {
-    context: &'static Context,
+    context: &'ctx Context,
     module: Rc<Module<'ctx>>,
     builder: Builder<'ctx>,
     void_ty: inkwell::types::VoidType<'ctx>,
@@ -44,22 +44,8 @@ pub struct ToIRVisitor<'ctx> {
     _phantom: std::marker::PhantomData<&'ctx ()>,
 }
 
-/*
-#[derive(Debug)]
-pub struct ToIRVisitor2<'ctx> {
-    m: Module<'ctx>,
-    ir_builder: Builder<'ctx>,
-    void_type: VoidType<'ctx>,
-    int32_type: IntType<'ctx>,
-    pointer_type: PointerType<'ctx>,
-    int32_zero: IntValue<'ctx>,
-    v: AnyValueEnum<'ctx>,
-    /*value */
-    /*name_map */
-}*/
-
 impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'static Context, module: Rc<Module<'ctx>>) -> Self {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
         let builder = context.create_builder();
         let void_ty = context.void_type();
         let int32_ty = context.i32_type();
@@ -177,31 +163,47 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                         exprs[right_idx.0] = r;
                         let right = self.v;
                         self.v = match node.op {
-                            Operator::Plus => self.builder.build_int_add(
-                                left.into_int_value(),
-                                right.into_int_value(),
-                                "addtmp",
-                            ).unwrap().into(),
-                            Operator::Minus => self.builder.build_int_sub(
-                                left.into_int_value(),
-                                right.into_int_value(),
-                                "subtmp",
-                            ).unwrap().into(),
-                            Operator::Mul => self.builder.build_int_mul(
-                                left.into_int_value(),
-                                right.into_int_value(),
-                                "multmp",
-                            ).unwrap().into(),
-                            Operator::Div => self.builder.build_int_signed_div(
-                                left.into_int_value(),
-                                right.into_int_value(),
-                                "divtmp",
-                            ).unwrap().into(),
+                            Operator::Plus => self
+                                .builder
+                                .build_int_add(
+                                    left.into_int_value(),
+                                    right.into_int_value(),
+                                    "addtmp",
+                                )
+                                .unwrap()
+                                .into(),
+                            Operator::Minus => self
+                                .builder
+                                .build_int_sub(
+                                    left.into_int_value(),
+                                    right.into_int_value(),
+                                    "subtmp",
+                                )
+                                .unwrap()
+                                .into(),
+                            Operator::Mul => self
+                                .builder
+                                .build_int_mul(
+                                    left.into_int_value(),
+                                    right.into_int_value(),
+                                    "multmp",
+                                )
+                                .unwrap()
+                                .into(),
+                            Operator::Div => self
+                                .builder
+                                .build_int_signed_div(
+                                    left.into_int_value(),
+                                    right.into_int_value(),
+                                    "divtmp",
+                                )
+                                .unwrap()
+                                .into(),
                             _ => panic!("Unsupported binary operator"),
                         }
                     }
                 }
-                node.into() 
+                node.into()
             }
             AST::Factor(factor) => {
                 match factor.kind {
@@ -220,19 +222,33 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     }
                 }
                 factor.into()
-            },
+            }
             AST::WithDecl(node) => {
                 let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
-                let read_fn = self.module.add_function("calc_read", read_ftype, Some(Linkage::External));
+                let read_fn =
+                    self.module
+                        .add_function("calc_read", read_ftype, Some(Linkage::External));
                 //let read_fn = self.module.get_function("calc_read").expect("calc_read function not found");
                 for var in &node.vars {
                     let var = var.iter().collect::<String>();
                     let str_val = self.context.const_string(var.as_bytes(), true);
-                    
-                    let global_str = self.module.add_global(str_val.get_type(), Some(AddressSpace::default()), &var);
+
+                    let global_str = self.module.add_global(
+                        str_val.get_type(),
+                        Some(AddressSpace::default()),
+                        &var,
+                    );
                     global_str.set_initializer(&str_val);
-                    let call = self.builder.build_call(read_fn, &[global_str.as_pointer_value().into()], "read_call").unwrap();
-                    self.name_map.insert(var, call.try_as_basic_value().left().unwrap());
+                    let call = self
+                        .builder
+                        .build_call(
+                            read_fn,
+                            &[global_str.as_pointer_value().into()],
+                            "read_call",
+                        )
+                        .unwrap();
+                    self.name_map
+                        .insert(var, call.try_as_basic_value().left().unwrap());
                 }
                 if let Some(expr) = node.expr_index {
                     let e = exprs.get_mut(expr.0).unwrap();
@@ -241,11 +257,8 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     exprs[expr.0] = e;
                 }
                 node.into()
-
-            },
-            AST::Index(index) => {
-                index.into()
             }
+            AST::Index(index) => index.into(),
         }
     }
 
