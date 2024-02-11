@@ -97,55 +97,6 @@ impl<'a> Default for ToIRVisitor<'a> {
 }
 
 impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
-    /*
-
-    fn inner_visit(&mut self, ast: &AST<'ctx>) {
-        match ast {
-            AST::BinaryOp(node) => {
-                // Recursively visit left and right operands
-                self.inner_visit(node.left.as_ref());
-                let left = self.v;
-                self.inner_visit(node.right.as_ref());
-                let right = self.v;
-
-                // Perform the operation based on the operator
-                self.v = match node.operator {
-                    BinaryOp::Plus => self.builder.build_int_add(left.into_int_value(), right.into_int_value(), "addtmp"),
-                    BinaryOp::Minus => self.builder.build_int_sub(left.into_int_value(), right.into_int_value(), "subtmp"),
-                    BinaryOp::Mul => self.builder.build_int_mul(left.into_int_value(), right.into_int_value(), "multmp"),
-                    BinaryOp::Div => self.builder.build_int_signed_div(left.into_int_value(), right.into_int_value(), "divtmp"),
-                    _ => panic!("Unsupported binary operator"),
-                }.into();
-            },
-            AST::Factor(node) => {
-                if node.kind == FactorKind::Ident {
-                    self.v = *self.name_map.get(&node.value).expect("Variable not found");
-                } else {
-                    let intval = node.value.parse::<i64>().expect("Invalid integer");
-                    self.v = self.context.i32_type().const_int(intval as u64, true).into();
-                }
-            },
-            AST::WithDecl(node) => {
-                // Assume `read_fn` is already declared somewhere in your module
-                let read_fn = self.module.get_function("calc_read").expect("calc_read function not found");
-                for var in &node.vars {
-                    // Create global variable for the string
-                    let str_val = self.context.const_string(var.as_bytes(), true);
-                    let global_str = self.module.add_global(str_val.get_type(), Some(AddressSpace::Generic), var);
-                    global_str.set_initializer(&str_val);
-
-                    // Create call to `calc_read` with the string's pointer
-                    let call = self.builder.build_call(read_fn, &[global_str.as_pointer_value().into()], "read_call");
-                    self.name_map.insert(var.clone(), call.try_as_basic_value().left().unwrap());
-                }
-
-                // Process the expression within the `WithDecl`
-                self.inner_visit(&node.expr);
-            },
-            _ => panic!("Unsupported AST node"),
-        }
-    } */
-
     fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut AST<'a>) {
         let ast_owned = std::mem::take(ast);
         *ast = match ast_owned {
@@ -228,7 +179,6 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                 let read_fn =
                     self.module
                         .add_function("calc_read", read_ftype, Some(Linkage::External));
-                //let read_fn = self.module.get_function("calc_read").expect("calc_read function not found");
                 for var in &node.vars {
                     let var = var.iter().collect::<String>();
                     let str_val = self.context.const_string(var.as_bytes(), true);
@@ -300,7 +250,6 @@ impl<'a> DeclCheck<'a> {
     }
 
     pub fn check(&self, _ast: AST<'a>) -> bool {
-        // let ast = ast.accept(self);
         self.has_error
     }
 }
