@@ -149,7 +149,6 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                                 )
                                 .unwrap()
                                 .into(),
-                            _ => panic!("Unsupported binary operator"),
                         }
                     }
                 }

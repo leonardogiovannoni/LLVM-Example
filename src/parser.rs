@@ -70,10 +70,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_calc_mid(&mut self, exprs: &mut Vec<Expr<'a>>) -> Option<AST<'a>> {
         let vars = self.parse_calc_begin()?;
-        let e = self.parse_expr(exprs);
-        let Some(e) = e else {
-            return None;
-        };
+        let e = self.parse_expr(exprs)?;
         if self.expect(TokenKind::Eoi) {
             return None;
         }
