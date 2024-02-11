@@ -74,7 +74,6 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let entry = self.context.append_basic_block(main_fn, "entry");
         self.builder.position_at_end(entry);
 
-        // Assume tree has an accept method that takes a visitor
         tree.accept(exprs, self);
 
         let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
@@ -115,28 +114,28 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                         self.v = match node.op {
                             Operator::Plus => self
                                 .builder
-                                .build_int_add(
+                                .build_int_nsw_add(
                                     left.into_int_value(),
                                     right.into_int_value(),
-                                    "addtmp",
+                                    "",
                                 )
                                 .unwrap()
                                 .into(),
                             Operator::Minus => self
                                 .builder
-                                .build_int_sub(
+                                .build_int_nsw_sub(
                                     left.into_int_value(),
                                     right.into_int_value(),
-                                    "subtmp",
+                                    "",
                                 )
                                 .unwrap()
                                 .into(),
                             Operator::Mul => self
                                 .builder
-                                .build_int_mul(
+                                .build_int_nsw_mul(
                                     left.into_int_value(),
                                     right.into_int_value(),
-                                    "multmp",
+                                    "",
                                 )
                                 .unwrap()
                                 .into(),
@@ -145,7 +144,7 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                                 .build_int_signed_div(
                                     left.into_int_value(),
                                     right.into_int_value(),
-                                    "divtmp",
+                                    "",
                                 )
                                 .unwrap()
                                 .into(),
@@ -177,6 +176,7 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                 let read_fn =
                     self.module
                         .add_function("calc_read", read_ftype, Some(Linkage::External));
+                
                 for var in &node.vars {
                     let var = var.iter().collect::<String>();
                     let str_val = self.context.const_string(var.as_bytes(), true);
@@ -184,15 +184,18 @@ impl<'a> ASTVisitorTrait<'a> for ToIRVisitor<'a> {
                     let global_str = self.module.add_global(
                         str_val.get_type(),
                         Some(AddressSpace::default()),
-                        &var,
+                        &format!("{}.str", var),
                     );
+
                     global_str.set_initializer(&str_val);
+                    global_str.set_linkage(Linkage::Private);
+                    global_str.set_constant(true);
                     let call = self
                         .builder
                         .build_call(
                             read_fn,
                             &[global_str.as_pointer_value().into()],
-                            "read_call",
+                            "",
                         )
                         .unwrap();
                     self.name_map
