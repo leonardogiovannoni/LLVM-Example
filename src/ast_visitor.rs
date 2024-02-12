@@ -97,36 +97,9 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>{
         match ast {
             Ast::BinaryOp(node) => {
-                let Some((left_idx, left)) = node
-                    .lhs_expr
-                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
-                    .flatten()
-                else {
-                    todo!()
-                };
-
-                let mut l = std::mem::take(left);
-                let res = l.accept(exprs, self);
-                exprs[left_idx] = l;
-                if res.is_err() {
-                    return res;
-                }
+                node.lhs_expr.unwrap().accept(exprs, self)?;
                 let left = self.v;
-
-                let Some((right_idx, right)) = node
-                    .rhs_expr
-                    .map(|x| exprs.get_mut(x.0).map(|y| (x.0, y)))
-                    .flatten()
-                else {
-                    todo!()
-                };
-
-                let mut r = std::mem::take(right);
-                let res = r.accept(exprs, self);
-                exprs[right_idx] = r;
-                if res.is_err() {
-                    return res;
-                }
+                node.rhs_expr.unwrap().accept(exprs, self)?;
                 let right = self.v;
                 
                 let op = match node.op {
@@ -185,17 +158,17 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     self.name_map
                         .insert(var, call.try_as_basic_value().left().unwrap());
                 }
-                if let Some(expr) = node.expr_index {
-                    let e = exprs.get_mut(expr.0).unwrap();
-                    let mut e = std::mem::take(e);
-                    let res = e.accept(exprs, self);
-                    exprs[expr.0] = e;
-                    if res.is_err() {
-                        return res;
-                    }
+                node.expr_index.unwrap().accept(exprs, self)?;
+            }
+            Ast::Index(expr_index) => {
+                let e = exprs.get_mut(expr_index.0).unwrap();
+                let mut e = std::mem::take(e);
+                let res = e.accept(exprs, self);
+                exprs[expr_index.0] = e;
+                if res.is_err() {
+                    return res;
                 }
             }
-            Ast::Index(_) => {}
         }
         Ok(())
     }
