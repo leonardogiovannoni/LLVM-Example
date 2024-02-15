@@ -1,3 +1,5 @@
+use crate::Span;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
 pub enum TokenKind {
@@ -17,13 +19,13 @@ pub enum TokenKind {
 }
 
 #[derive(Debug)]
-pub struct Token<'a> {
+pub struct Token {
     pub kind: TokenKind,
-    pub text: &'a [char],
+    pub text: Span,
 }
 
-impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, text: &'a [char]) -> Token<'a> {
+impl Token {
+    pub fn new(kind: TokenKind, text: Span) -> Self {
         Token { kind, text }
     }
 

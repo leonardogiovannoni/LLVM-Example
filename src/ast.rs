@@ -1,7 +1,7 @@
 use crate::*;
 
-use enum_dispatch::enum_dispatch;
 use anyhow::Result;
+use enum_dispatch::enum_dispatch;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ExprIndex(pub usize);
@@ -39,61 +39,97 @@ pub enum ValueKind {
     Number,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct Factor<'a> {
+#[derive(Debug, Clone)]
+pub struct Factor {
     pub kind: ValueKind,
-    pub val: &'a [char],
+    pub text: Rc<[char]>,
+    pub span: Span,
 }
 
-impl<'a> Factor<'a> {
-    pub fn new(v: ValueKind, text: &'a [char]) -> Factor {
-        Factor { kind: v, val: text }
+impl Default for Factor {
+    fn default() -> Self {
+        Self {
+            kind: Default::default(),
+            text: Rc::new([]),
+            span: Span::new(0, 0),
+        }
     }
 }
 
-#[derive(Debug, Default)]
-pub struct WithDecl<'a> {
-    pub vars: Vec<&'a [char]>,
+impl Factor {
+    pub fn new(v: ValueKind, text: Rc<[char]>, span: Span) -> Factor {
+        Factor {
+            kind: v,
+            text,
+            span,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct WithDecl {
+    pub vars: Vec<Span>,
+    pub text: Rc<[char]>,
     pub expr_index: Option<ExprIndex>,
 }
 
-impl<'a> WithDecl<'a> {
-    pub fn new(vars: Vec<&'a [char]>, expr_index: Option<ExprIndex>) -> WithDecl<'a> {
-        WithDecl { vars, expr_index }
+impl Default for WithDecl {
+    fn default() -> Self {
+        Self {
+            vars: Default::default(),
+            text: Rc::new([]),
+            expr_index: Default::default(),
+        }
+    }
+}
+
+impl WithDecl {
+    pub fn new(vars: Vec<Span>, text: Rc<[char]>, expr_index: Option<ExprIndex>) -> WithDecl {
+        WithDecl {
+            vars,
+            text,
+            expr_index,
+        }
     }
 
     pub fn get_expr(&self) -> Option<ExprIndex> {
         self.expr_index
     }
+
+    pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
+        self.vars
+            .iter()
+            .map(|v| self.text.get(v.start..v.end).unwrap())
+    }
 }
 
 #[derive(Debug)]
 #[enum_dispatch]
-pub enum Ast<'a> {
+pub enum Ast {
     BinaryOp(BinaryOp),
-    Factor(Factor<'a>),
-    WithDecl(WithDecl<'a>),
+    Factor(Factor),
+    WithDecl(WithDecl),
     Index(ExprIndex),
 }
 
 #[enum_dispatch(Ast)]
-pub trait AstTrait<'a> {
-    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()>;
-    fn swap(&mut self, ast: &mut Ast<'a>);
-    fn take(&mut self) -> Ast<'a>;
-    fn replace(&mut self, ast: Ast<'a>) -> Ast<'a>;
+pub trait AstTrait {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()>;
+    fn swap(&mut self, ast: &mut Ast);
+    fn take(&mut self) -> Ast;
+    fn replace(&mut self, ast: Ast) -> Ast;
 }
 
 macro_rules! impl_ast {
     ($($t:ty),*) => {
         $(
-            impl<'a> AstTrait<'a> for $t {
+            impl AstTrait for $t {
 
-                fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
+                fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
                     v.visit(exprs, self)
                 }
 
-                fn swap(&mut self, ast: &mut Ast<'a>) {
+                fn swap(&mut self, ast: &mut Ast) {
                     let s = std::mem::take(self);
                     let ss = Ast::from(s);
                     let a = std::mem::take(ast);
@@ -101,7 +137,7 @@ macro_rules! impl_ast {
                     *ast = ss;
                 }
 
-                fn take(&mut self) -> Ast<'a> {
+                fn take(&mut self) -> Ast {
                     let mut ast = Ast::from(<$t>::default());
                     let s = std::mem::take(self);
                     let a = std::mem::take(&mut ast);
@@ -109,7 +145,7 @@ macro_rules! impl_ast {
                     s.into()
                 }
 
-                fn replace(&mut self, ast: Ast<'a>) -> Ast<'a> {
+                fn replace(&mut self, ast: Ast) -> Ast {
                     let s = std::mem::take(self);
                     *self = ast.try_into().unwrap();
                     s.into()
@@ -119,9 +155,9 @@ macro_rules! impl_ast {
     };
 }
 
-impl_ast!(BinaryOp, Factor<'a>, WithDecl<'a>, ExprIndex);
+impl_ast!(BinaryOp, Factor, WithDecl, ExprIndex);
 
-impl<'a> Default for Ast<'a> {
+impl<'a> Default for Ast {
     fn default() -> Self {
         Ast::Index(ExprIndex::default())
     }

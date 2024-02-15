@@ -1,43 +1,57 @@
 use crate::*;
-pub struct Lexer<'a> {
-    //buffer_start: &'a [char],
-    buffer_ptr: &'a [char],
+
+pub struct Lexer {
+    pub text: Rc<[char]>,
+    pub buffer_ptr: Span,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(input: &'a [char]) -> Lexer<'a> {
+impl Lexer {
+    pub fn new<'a>(input: Rc<[char]>) -> Self {
         Lexer {
-            //buffer_start: input,
-            buffer_ptr: input,
+            buffer_ptr: Span::new(0, input.len()),
+            text: input,
         }
     }
 
-    pub fn form_token(&mut self, token: &mut Token<'a>, tok_end: usize, kind: TokenKind) {
+    pub fn form_token(&mut self, token: &mut Token, tok_end: usize, kind: TokenKind) {
         token.kind = kind;
-        token.text = &self.buffer_ptr[..tok_end];
-        self.buffer_ptr = &self.buffer_ptr[tok_end..];
+        token.text = Span {
+            start: self.buffer_ptr.start,
+            end: self.buffer_ptr.start + tok_end,
+        };
+        self.buffer_ptr.start += tok_end;
     }
 
-    pub fn next(&mut self, token: &mut Token<'a>) {
-        let i = self
-            .buffer_ptr
-            .iter()
-            .take_while(|x| x.is_whitespace())
-            .count();
-
-        self.buffer_ptr = &self.buffer_ptr[i..];
-        let Some(c) = self.buffer_ptr.first() else {
+    pub fn next<'a>(&mut self, token: &mut Token) {
+        let i = Some(self.buffer_ptr)
+            .map(|x| {
+                self.text[x.start..x.end]
+                    .iter()
+                    .take_while(|x| x.is_whitespace())
+                    .count()
+            })
+            .unwrap_or(0);
+        self.buffer_ptr.start += i;
+        let first = self.text.get(self.buffer_ptr.start);
+        let Some(c) = first else {
             token.kind = TokenKind::Eoi;
-            token.text = &[];
+            token.text = Span {
+                start: self.buffer_ptr.start,
+                end: self.buffer_ptr.start,
+            };
             return;
         };
         match c {
             x if x.is_alphabetic() => {
-                let i = self.buffer_ptr[1..]
-                    .iter()
-                    .take_while(|x| x.is_alphabetic())
-                    .count();
-                let name = &self.buffer_ptr[..i + 1];
+                let i = Some(self.buffer_ptr)
+                    .map(|x| {
+                        self.text[x.start + 1..x.end]
+                            .iter()
+                            .take_while(|x| x.is_alphabetic())
+                            .count()
+                    })
+                    .unwrap_or(0);
+                let name = &self.text[self.buffer_ptr.start..self.buffer_ptr.start + i + 1];
                 let kind = match name {
                     ['w', 'i', 't', 'h'] => TokenKind::KWWith,
                     _ => TokenKind::Ident,
@@ -45,11 +59,14 @@ impl<'a> Lexer<'a> {
                 self.form_token(token, i + 1, kind)
             }
             x if x.is_ascii_digit() => {
-                let i = self
-                    .buffer_ptr
-                    .iter()
-                    .take_while(|x| x.is_ascii_digit())
-                    .count();
+                let i = Some(self.buffer_ptr)
+                    .map(|x| {
+                        self.text[x.start..x.end]
+                            .iter()
+                            .take_while(|x| x.is_ascii_digit())
+                            .count()
+                    })
+                    .unwrap_or(0);
                 self.form_token(token, i, TokenKind::Number)
             }
             '+' => self.form_token(token, 1, TokenKind::Plus),

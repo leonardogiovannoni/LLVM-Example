@@ -1,28 +1,28 @@
 use crate::*;
-use enum_dispatch::enum_dispatch;
 use anyhow::Result;
+use enum_dispatch::enum_dispatch;
 #[derive(Debug, Clone)]
 #[enum_dispatch]
-pub enum Expr<'a> {
+pub enum Expr {
     BinaryOp(BinaryOp),
-    Factor(Factor<'a>),
+    Factor(Factor),
 }
 
-impl<'a> Default for Expr<'a> {
+impl<'a> Default for Expr {
     fn default() -> Self {
         Expr::BinaryOp(BinaryOp::default())
     }
 }
 
-impl<'a> AstTrait<'a> for Expr<'a> {
-    fn accept(&mut self, exprs: &mut Vec<Expr<'a>>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
+impl AstTrait for Expr {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
         match self {
             Expr::BinaryOp(ast) => AstTrait::accept(ast, exprs, v),
             Expr::Factor(ast) => AstTrait::accept(ast, exprs, v),
         }
     }
 
-    fn swap(&mut self, ast: &mut Ast<'a>) {
+    fn swap(&mut self, ast: &mut Ast) {
         match self {
             Expr::BinaryOp(b) => {
                 AstTrait::swap(b, ast);
@@ -33,19 +33,17 @@ impl<'a> AstTrait<'a> for Expr<'a> {
         }
     }
 
-    fn take(&mut self) -> Ast<'a> {
+    fn take(&mut self) -> Ast {
         match self {
             Expr::BinaryOp(b) => AstTrait::take(b),
             Expr::Factor(f) => AstTrait::take(f),
         }
     }
 
-    fn replace(&mut self, ast: Ast<'a>) -> Ast<'a> {
+    fn replace(&mut self, ast: Ast) -> Ast {
         match self {
             Expr::BinaryOp(b) => AstTrait::replace(b, ast),
             Expr::Factor(f) => AstTrait::replace(f, ast),
         }
     }
 }
-
-

@@ -11,12 +11,12 @@ impl<'a> DebugAstVisitor<'a> {
         }
     }
 
-    fn resolve_and_format_expr_index(&self, exprs: &[Expr<'a>], index: ExprIndex) -> String {
+    fn resolve_and_format_expr_index(&self, exprs: &[Expr], index: ExprIndex) -> String {
         let expr = &exprs[index.0];
         self.format_expr(exprs, expr)
     }
 
-    fn format_expr(&self, exprs: &[Expr<'a>], expr: &Expr<'a>) -> String {
+    fn format_expr(&self, exprs: &[Expr], expr: &Expr) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
                 let resolve_fn = |idx: Option<ExprIndex>| {
@@ -30,7 +30,9 @@ impl<'a> DebugAstVisitor<'a> {
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
             Expr::Factor(factor) => {
-                let val = factor.val.iter().collect::<String>();
+                let val = factor.text[factor.span.start..factor.span.end]
+                    .iter()
+                    .collect::<String>();
                 let kind = format!("{:?}", factor.kind);
                 format!("Factor(kind: {}, val: {})", kind, val)
             }
@@ -39,7 +41,7 @@ impl<'a> DebugAstVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()> {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
         match ast {
             Ast::BinaryOp(bin_op) => {
                 let get_pretty_name = |idx: Option<ExprIndex>| {
@@ -53,14 +55,15 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
                 println!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op);
             }
             Ast::Factor(factor) => {
-                let val = factor.val.iter().collect::<String>();
+                let val = factor.text[factor.span.start..factor.span.end]
+                    .iter()
+                    .collect::<String>();
                 let kind = format!("{:?}", factor.kind);
                 println!("Factor(kind: {}, val: {})", kind, val);
             }
             Ast::WithDecl(with_decl) => {
                 let vars = with_decl
-                    .vars
-                    .iter()
+                    .vars_iter()
                     .map(|v| v.iter().collect::<String>())
                     .collect::<Vec<_>>();
                 let expr = with_decl
@@ -80,7 +83,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -88,7 +91,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     }
 }
 
-pub fn debug_ast<'a>(ast: &mut Ast<'a>, exprs: &mut Vec<Expr<'a>>) {
+pub fn debug_ast(ast: &mut Ast, exprs: &mut Vec<Expr>) {
     let mut visitor = DebugAstVisitor::new();
     visitor.visit(exprs, ast).unwrap();
 }

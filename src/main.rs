@@ -14,12 +14,13 @@ use crate::parser::*;
 use crate::token::*;
 use inkwell::context::Context;
 use std::collections::HashSet;
+use std::ops::Range;
 use std::rc::Rc;
 
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic<'a>(&self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> bool {
+    pub fn semantic<'a>(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> bool {
         let mut check = DeclCheck::new();
         ast.accept(exprs, &mut check).unwrap();
         check.has_error
@@ -35,20 +36,43 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, exprs: &mut Vec<Expr<'a>>, mut ast: Ast<'a>) {
+    pub fn compile(&self, exprs: &mut Vec<Expr>, mut ast: Ast) {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
         to_ir.run(exprs, &mut ast).unwrap();
-        module.print_to_stderr();
+        let s = module.print_to_string().to_string();
+        println!("{}", s);
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl From<Range<usize>> for Span {
+    fn from(range: Range<usize>) -> Self {
+        Span {
+            start: range.start,
+            end: range.end,
+        }
+    }
+}
+
+impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Span { start, end }
     }
 }
 
 fn main() {
     let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
-    let lexer = Lexer::new(&input);
-    let mut parser = Parser::new(lexer);
+    let input = Rc::from(input);
+    let lexer = Lexer::new(Rc::clone(&input));
+    let mut parser = Parser::new(lexer, Rc::clone(&input));
     let mut exprs = Vec::new();
     let ast = parser.parse(&mut exprs);
     if parser.has_error {

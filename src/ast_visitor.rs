@@ -14,7 +14,7 @@ use anyhow::{bail, Result};
 #[derive(Debug)]
 #[enum_dispatch]
 pub enum AstVisitor<'a> {
-    DeclCheck(DeclCheck<'a>),
+    DeclCheck(DeclCheck),
     ToIRVisitor(ToIRVisitor<'a>),
 }
 
@@ -26,8 +26,8 @@ impl<'a> Default for AstVisitor<'a> {
 
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>;
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()>;
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()>;
+    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             name_map: Default::default(),
         }
     }
-    pub fn run(&mut self, exprs: &mut Vec<Expr<'ctx>>, tree: &mut Ast<'ctx>) -> Result<()> {
+    pub fn run(&mut self, exprs: &mut Vec<Expr>, tree: &mut Ast) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
@@ -94,14 +94,14 @@ impl<'a> Default for ToIRVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut Ast<'a>) -> Result<()>{
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
         match ast {
             Ast::BinaryOp(node) => {
                 node.lhs_expr.unwrap().accept(exprs, self)?;
                 let left = self.v;
                 node.rhs_expr.unwrap().accept(exprs, self)?;
                 let right = self.v;
-                
+
                 let op = match node.op {
                     Operator::Plus => Builder::build_int_nsw_add,
                     Operator::Minus => Builder::build_int_nsw_sub,
@@ -113,32 +113,35 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     left.into_int_value(),
                     right.into_int_value(),
                     "",
-                )?.into();
+                )?
+                .into();
             }
-            Ast::Factor(factor) => {
-                match factor.kind {
-                    ValueKind::Ident => {
-                        let val = factor.val.iter().collect::<String>();
-                        if let Some(val) = self.name_map.get(&val) {
-                            self.v = *val;
-                        } else {
-                            panic!("Variable not found");
-                        }
-                    }
-                    _ => {
-                        let val = factor.val.iter().collect::<String>();
-                        let intval = val.parse::<i64>().expect("Invalid integer");
-                        self.v = self.int32_ty.const_int(intval as u64, true).into();
+            Ast::Factor(factor) => match factor.kind {
+                ValueKind::Ident => {
+                    let val = factor.text[factor.span.start..factor.span.end]
+                        .iter()
+                        .collect::<String>();
+                    if let Some(val) = self.name_map.get(&val) {
+                        self.v = *val;
+                    } else {
+                        panic!("Variable not found");
                     }
                 }
-            }
+                _ => {
+                    let val = factor.text[factor.span.start..factor.span.end]
+                        .iter()
+                        .collect::<String>();
+                    let intval = val.parse::<i64>().expect("Invalid integer");
+                    self.v = self.int32_ty.const_int(intval as u64, true).into();
+                }
+            },
             Ast::WithDecl(node) => {
                 let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
                 let read_fn =
                     self.module
                         .add_function("calc_read", read_ftype, Some(Linkage::External));
 
-                for var in &node.vars {
+                for var in node.vars_iter() {
                     let var = var.iter().collect::<String>();
                     let str_val = self.context.const_string(var.as_bytes(), true);
 
@@ -152,9 +155,11 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     global_str.set_linkage(Linkage::Private);
                     global_str.set_constant(true);
 
-                    let call = self
-                        .builder
-                        .build_call(read_fn, &[global_str.as_pointer_value().into()], "")?;
+                    let call = self.builder.build_call(
+                        read_fn,
+                        &[global_str.as_pointer_value().into()],
+                        "",
+                    )?;
                     self.name_map
                         .insert(var, call.try_as_basic_value().left().unwrap());
                 }
@@ -173,7 +178,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -182,8 +187,9 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
 }
 
 #[derive(Debug, Default)]
-pub struct DeclCheck<'a> {
-    pub scope: HashSet<&'a [char]>,
+pub struct DeclCheck {
+    //pub scope: HashSet<&'a [char]>,
+    pub scope: HashSet<Span>,
     pub has_error: bool,
 }
 
@@ -193,15 +199,15 @@ pub enum ErrorType {
     Not,
 }
 
-impl<'a> DeclCheck<'a> {
-    pub fn new() -> DeclCheck<'a> {
+impl DeclCheck {
+    pub fn new() -> Self {
         DeclCheck {
             scope: HashSet::new(),
             has_error: false,
         }
     }
 
-    pub fn error(&mut self, err: ErrorType, s: &[char]) {
+    pub fn error(&mut self, err: ErrorType, s: Span) {
         let tmp = if err == ErrorType::Twice {
             "twice"
         } else {
@@ -212,8 +218,8 @@ impl<'a> DeclCheck<'a> {
     }
 }
 
-impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr<'a>>, node: &mut Ast<'a>) -> Result<()>{
+impl<'a> AstVisitorTrait<'a> for DeclCheck {
+    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, node: &mut Ast) -> Result<()> {
         match node {
             Ast::BinaryOp(node) => {
                 // TODO: check for existence of ExprIndex in exprs
@@ -226,17 +232,18 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
                 }
             }
             Ast::Factor(node) => {
-                if node.kind == ValueKind::Ident && !self.scope.contains(node.val) {
-                    self.error(ErrorType::Not, node.val);
+                if node.kind == ValueKind::Ident && !self.scope.contains(&node.span) {
+                    self.error(ErrorType::Not, node.span);
                 }
             }
             Ast::WithDecl(node) => {
-                for &i in &node.vars {
+                for i in node.vars.iter() {
                     if self.scope.contains(i) {
-                        self.error(ErrorType::Twice, i);
+                        self.error(ErrorType::Twice, *i);
                         bail!("Variable declared twice");
                     }
-                    self.scope.insert(i);
+                    //let i = Box::leak(i.to_vec().into_boxed_slice());
+                    self.scope.insert(*i);
                 }
 
                 if let Some(mut expr) = node.expr_index {
@@ -250,7 +257,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr<'a>>, ast: &mut dyn AstTrait<'a>) -> Result<()> {
+    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
