@@ -41,7 +41,7 @@ impl<'a> DebugAstVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
-    fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
+    /*fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
         match ast {
             Ast::BinaryOp(bin_op) => {
                 let get_pretty_name = |idx: Option<ExprIndex>| {
@@ -82,14 +82,66 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         }
         Ok(())
     }
+*/
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &impl AstTrait) -> Result<()> {
+        
+        let bin_op_fn = |bin_op: &BinaryOp| {
+            let get_pretty_name = |idx: Option<ExprIndex>| {
+                idx.map(|idx| self.resolve_and_format_expr_index(exprs, idx))
+                    .map(|expr| format!("Some({})", expr))
+                    .unwrap_or_else(|| "None".to_string())
+            };
+            let lhs = get_pretty_name(bin_op.lhs_expr);
+            let rhs = get_pretty_name(bin_op.rhs_expr);
+            let op = format!("{:?}", bin_op.op);
+            println!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op);
+            Ok(())
+        };
 
-    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut impl AstTrait) -> Result<()> {
-        let mut tmp = ast.take();
-        let res = self.inner_visit(exprs, &mut tmp);
-        ast.replace(tmp);
-        res
+
+        let factor_fn = |factor: &Factor| {
+            let val = factor.text[factor.span.start..factor.span.end]
+                .iter()
+                .collect::<String>();
+            let kind = format!("{:?}", factor.kind);
+            println!("Factor(kind: {}, val: {})", kind, val);
+            Ok(())
+        };
+
+        let with_decl_fn = |with_decl: &WithDecl| {
+            let vars = with_decl
+                .vars_iter()
+                .map(|v| v.iter().collect::<String>())
+                .collect::<Vec<_>>();
+            let expr = with_decl
+                .expr_index
+                .map(|idx| self.resolve_and_format_expr_index(exprs, idx));
+            let expr = expr
+                .map(|expr| format!("Some({})", expr))
+                .unwrap_or_else(|| "None".to_string());
+            let vars = format!("{:?}", vars);
+            println!("WithDecl(vars: {}, expr: {})", vars, expr);
+            Ok(())
+        };
+
+        let index_fn = |index: &ExprIndex| {
+            let index = format!("{:?}", index.0);
+            println!("Index({})", index);
+            Ok(())
+        };
+
+        ast.callbacks(
+            Some(bin_op_fn),
+            Some(factor_fn),
+            Some(with_decl_fn),
+            Some(index_fn),
+        )?;
+        Ok(())
+
     }
 }
+
+
 
 pub fn debug_ast(ast: &mut Ast, exprs: &mut Vec<Expr>) {
     let visitor = DebugAstVisitor::new();

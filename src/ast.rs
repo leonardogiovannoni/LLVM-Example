@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use crate::*;
 
 use anyhow::Result;
@@ -118,47 +120,207 @@ pub trait AstTrait {
     fn swap(&mut self, ast: &mut Ast);
     fn take(&mut self) -> Ast;
     fn replace(&mut self, ast: Ast) -> Ast;
+    fn callbacks_mut(
+        &mut self,
+        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
+    ) -> Result<()>;
+
+    fn callbacks(
+        &self,
+        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+    ) -> Result<()>;
 }
-
-macro_rules! impl_ast {
-    ($($t:ty),*) => {
-        $(
-            impl AstTrait for $t {
-
-                fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-                    v.visit(exprs, self)
-                }
-
-                fn swap(&mut self, ast: &mut Ast) {
-                    let s = std::mem::take(self);
-                    let ss = Ast::from(s);
-                    let a = std::mem::take(ast);
-                    *self = a.try_into().unwrap();
-                    *ast = ss;
-                }
-
-                fn take(&mut self) -> Ast {
-                    let mut ast = Ast::from(<$t>::default());
-                    let s = std::mem::take(self);
-                    let a = std::mem::take(&mut ast);
-                    *self = a.try_into().unwrap();
-                    s.into()
-                }
-
-                fn replace(&mut self, ast: Ast) -> Ast {
-                    let s = std::mem::take(self);
-                    *self = ast.try_into().unwrap();
-                    s.into()
-                }
-            }
-        )*
-    };
-}
-
-impl_ast!(BinaryOp, Factor, WithDecl, ExprIndex);
 
 impl<'a> Default for Ast {
     fn default() -> Self {
         Ast::Index(ExprIndex::default())
     }
 }
+
+
+
+impl AstTrait for BinaryOp {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit(exprs, self)
+    }
+
+    fn swap(&mut self, ast: &mut Ast) {
+        let s = std::mem::take(self);
+        let ss = Ast::from(s);
+        let a = std::mem::take(ast);
+        *self = a.try_into().unwrap();
+        *ast = ss;
+    }
+
+    fn take(&mut self) -> Ast {
+        let mut ast = Ast::from(BinaryOp::default());
+        let s = std::mem::take(self);
+        let a = std::mem::take(&mut ast);
+        *self = a.try_into().unwrap();
+        s.into()
+    }
+
+    fn replace(&mut self, ast: Ast) -> Ast {
+        let s = std::mem::take(self);
+        *self = ast.try_into().unwrap();
+        s.into()
+    }
+
+    fn callbacks_mut(
+        &mut self,
+        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
+
+    ) -> Result<()> {
+        bin_op.unwrap()(self)
+    }
+
+    fn callbacks(
+        &self,
+        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+    ) -> Result<()> {
+        bin_op.unwrap()(self)
+    }
+}
+
+impl AstTrait for Factor {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit(exprs, self)
+    }
+
+    fn swap(&mut self, ast: &mut Ast) {
+        let s = std::mem::take(self);
+        let ss = Ast::from(s);
+        let a = std::mem::take(ast);
+        *self = a.try_into().unwrap();
+        *ast = ss;
+    }
+
+    fn take(&mut self) -> Ast {
+        let mut ast = Ast::from(Factor::default());
+        let s = std::mem::take(self);
+        let a = std::mem::take(&mut ast);
+        *self = a.try_into().unwrap();
+        s.into()
+    }
+
+    fn replace(&mut self, ast: Ast) -> Ast {
+        let s = std::mem::take(self);
+        *self = ast.try_into().unwrap();
+        s.into()
+    }
+
+
+    fn callbacks_mut(&mut self,bin_op:Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,factor:Option<impl FnOnce(&mut Factor) -> Result<()>>,with_decl:Option<impl FnOnce(&mut WithDecl) -> Result<()>>,index:Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,) -> Result<()> {
+        factor.unwrap()(self)
+    }
+
+    fn callbacks(
+        &self,
+        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+    ) -> Result<()> {
+        factor.unwrap()(self)
+    }
+
+}
+
+impl AstTrait for WithDecl {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit(exprs, self)
+    }
+
+    fn swap(&mut self, ast: &mut Ast) {
+        let s = std::mem::take(self);
+        let ss = Ast::from(s);
+        let a = std::mem::take(ast);
+        *self = a.try_into().unwrap();
+        *ast = ss;
+    }
+
+    fn take(&mut self) -> Ast {
+        let mut ast = Ast::from(WithDecl::default());
+        let s = std::mem::take(self);
+        let a = std::mem::take(&mut ast);
+        *self = a.try_into().unwrap();
+        s.into()
+    }
+
+    fn replace(&mut self, ast: Ast) -> Ast {
+        let s = std::mem::take(self);
+        *self = ast.try_into().unwrap();
+        s.into()
+    }
+
+    fn callbacks_mut(&mut self,bin_op:Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,factor:Option<impl FnOnce(&mut Factor) -> Result<()>>,with_decl:Option<impl FnOnce(&mut WithDecl) -> Result<()>>,index:Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,) -> Result<()> {
+        with_decl.unwrap()(self)
+    }
+
+    fn callbacks(
+        &self,
+        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+    ) -> Result<()> {
+        with_decl.unwrap()(self)
+    }
+
+    
+}
+
+impl AstTrait for ExprIndex {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit(exprs, self)
+    }
+
+    fn swap(&mut self, ast: &mut Ast) {
+        let s = std::mem::take(self);
+        let ss = Ast::from(s);
+        let a = std::mem::take(ast);
+        *self = a.try_into().unwrap();
+        *ast = ss;
+    }
+
+    fn take(&mut self) -> Ast {
+        let mut ast = Ast::from(ExprIndex::default());
+        let s = std::mem::take(self);
+        let a = std::mem::take(&mut ast);
+        *self = a.try_into().unwrap();
+        s.into()
+    }
+
+    fn replace(&mut self, ast: Ast) -> Ast {
+        let s = std::mem::take(self);
+        *self = ast.try_into().unwrap();
+        s.into()
+    }
+
+    fn callbacks_mut(&mut self,bin_op:Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,factor:Option<impl FnOnce(&mut Factor) -> Result<()>>,with_decl:Option<impl FnOnce(&mut WithDecl) -> Result<()>>,index:Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,) -> Result<()> {
+        index.unwrap()(self)
+    }
+
+    fn callbacks(
+        &self,
+        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+    ) -> Result<()> {
+        index.unwrap()(self)
+    }
+}
+
