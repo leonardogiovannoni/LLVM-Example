@@ -83,7 +83,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut impl AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -92,6 +92,6 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
 }
 
 pub fn debug_ast(ast: &mut Ast, exprs: &mut Vec<Expr>) {
-    let mut visitor = DebugAstVisitor::new();
+    let visitor = DebugAstVisitor::new();
     visitor.visit(exprs, ast).unwrap();
 }

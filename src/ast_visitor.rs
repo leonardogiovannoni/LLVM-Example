@@ -27,7 +27,8 @@ impl<'a> Default for AstVisitor<'a> {
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
     fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()>;
-    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()>;
+    //fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()>;
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut impl AstTrait) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -182,7 +183,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut impl AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -247,7 +248,6 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
                         self.error(ErrorType::Twice, *i);
                         bail!("Variable declared twice");
                     }
-                    //let i = Box::leak(i.to_vec().into_boxed_slice());
                     self.scope.borrow_mut().insert(*i);
                 }
 
@@ -262,7 +262,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut impl AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
