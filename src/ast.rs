@@ -1,4 +1,4 @@
-use std::any::Any;
+
 
 use crate::*;
 
@@ -134,7 +134,7 @@ pub trait AstTrait {
     ) -> Result<()>;
 }
 
-impl<'a> Default for Ast {
+impl Default for Ast {
     fn default() -> Self {
         Ast::Index(ExprIndex::default())
     }

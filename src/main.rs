@@ -21,9 +21,9 @@ use std::rc::Rc;
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic<'a>(&self, exprs: &State, ast: &mut Ast) -> bool {
-        let mut check = DeclCheck::new();
-        ast.accept(exprs, &mut check).unwrap();
+    pub fn semantic(&self, exprs: &State, ast: &mut Ast) -> bool {
+        let check = DeclCheck::new();
+        ast.accept(exprs, &check).unwrap();
         check.has_error.get()
     }
 }

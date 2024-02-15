@@ -45,7 +45,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         let bin_op_fn = |bin_op: &BinaryOp| {
             let exprs = &exprs.exprs;
             let get_pretty_name = |idx: Option<ExprIndex>| {
-                idx.map(|idx| self.resolve_and_format_expr_index(&*exprs.borrow(), idx))
+                idx.map(|idx| self.resolve_and_format_expr_index(&exprs.borrow(), idx))
                     .map(|expr| format!("Some({})", expr))
                     .unwrap_or_else(|| "None".to_string())
             };
@@ -73,7 +73,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
             let exprs = &exprs.exprs;
             let expr = with_decl
                 .expr_index
-                .map(|idx| self.resolve_and_format_expr_index(&*exprs.borrow(), idx));
+                .map(|idx| self.resolve_and_format_expr_index(&exprs.borrow(), idx));
             let expr = expr
                 .map(|expr| format!("Some({})", expr))
                 .unwrap_or_else(|| "None".to_string());

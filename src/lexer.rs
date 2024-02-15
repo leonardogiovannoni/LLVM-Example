@@ -6,7 +6,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new<'a>(input: Rc<[char]>) -> Self {
+    pub fn new(input: Rc<[char]>) -> Self {
         Lexer {
             buffer_ptr: Span::new(0, input.len()),
             text: input,
@@ -22,7 +22,7 @@ impl Lexer {
         self.buffer_ptr.start += tok_end;
     }
 
-    pub fn next<'a>(&mut self, token: &mut Token) {
+    pub fn next(&mut self, token: &mut Token) {
         let i = Some(self.buffer_ptr)
             .map(|x| {
                 self.text[x.start..x.end]

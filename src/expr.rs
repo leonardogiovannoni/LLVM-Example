@@ -8,7 +8,7 @@ pub enum Expr {
     Factor(Factor),
 }
 
-impl<'a> Default for Expr {
+impl Default for Expr {
     fn default() -> Self {
         Expr::BinaryOp(BinaryOp::default())
     }
