@@ -13,6 +13,7 @@ use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
 use inkwell::context::Context;
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::ops::Range;
 use std::rc::Rc;
@@ -20,7 +21,7 @@ use std::rc::Rc;
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic<'a>(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> bool {
+    pub fn semantic<'a>(&self, exprs: &State, ast: &mut Ast) -> bool {
         let mut check = DeclCheck::new();
         ast.accept(exprs, &mut check).unwrap();
         check.has_error.get()
@@ -36,7 +37,7 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, exprs: &mut Vec<Expr>, mut ast: Ast) {
+    pub fn compile(&self, exprs: &State, mut ast: Ast) {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
@@ -67,28 +68,34 @@ impl Span {
     }
 }
 
+pub struct State {
+    pub exprs: RefCell<Vec<Expr>>,
+}
+
 fn main() {
     let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
     let input = Rc::from(input);
     let lexer = Lexer::new(Rc::clone(&input));
     let mut parser = Parser::new(lexer, Rc::clone(&input));
-    let mut exprs = Vec::new();
-    let ast = parser.parse(&mut exprs);
+    let state = State {
+        exprs: RefCell::new(Vec::new()),
+    };
+    let ast = parser.parse(&state);
     if parser.has_error {
         return;
     }
     let Some(mut ast) = ast else {
         return;
     };
-    debug_ast(&mut ast, &mut exprs);
+    debug_ast(&ast, &state);
     let semantic = Sema;
 
-    if semantic.semantic(&mut exprs, &mut ast) {
+    if semantic.semantic(&state, &mut ast) {
         println!("semantic error");
         return;
     }
     let ctx = Context::create();
     let codegen = CodeGen::new(&ctx);
-    codegen.compile(&mut exprs, ast);
+    codegen.compile(&state, ast);
 }
