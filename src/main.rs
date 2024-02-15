@@ -23,7 +23,7 @@ impl Sema {
     pub fn semantic<'a>(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> bool {
         let mut check = DeclCheck::new();
         ast.accept(exprs, &mut check).unwrap();
-        check.has_error
+        check.has_error.get()
     }
 }
 

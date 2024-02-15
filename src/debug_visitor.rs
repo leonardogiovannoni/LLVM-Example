@@ -41,7 +41,7 @@ impl<'a> DebugAstVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
+    fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
         match ast {
             Ast::BinaryOp(bin_op) => {
                 let get_pretty_name = |idx: Option<ExprIndex>| {
@@ -83,7 +83,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);

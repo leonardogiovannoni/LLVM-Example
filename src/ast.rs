@@ -114,7 +114,7 @@ pub enum Ast {
 
 #[enum_dispatch(Ast)]
 pub trait AstTrait {
-    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()>;
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &dyn AstVisitorTrait<'a>) -> Result<()>;
     fn swap(&mut self, ast: &mut Ast);
     fn take(&mut self) -> Ast;
     fn replace(&mut self, ast: Ast) -> Ast;
@@ -125,7 +125,7 @@ macro_rules! impl_ast {
         $(
             impl AstTrait for $t {
 
-                fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
+                fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &dyn AstVisitorTrait<'a>) -> Result<()> {
                     v.visit(exprs, self)
                 }
 

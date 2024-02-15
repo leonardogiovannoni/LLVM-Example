@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::{Cell, RefCell}, collections::HashMap};
 
 use enum_dispatch::enum_dispatch;
 use inkwell::{
@@ -26,8 +26,8 @@ impl<'a> Default for AstVisitor<'a> {
 
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()>;
-    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()>;
+    fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()>;
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -39,8 +39,8 @@ pub struct ToIRVisitor<'ctx> {
     int32_ty: inkwell::types::IntType<'ctx>,
     ptr_ty: inkwell::types::PointerType<'ctx>,
     int32_zero: inkwell::values::IntValue<'ctx>,
-    v: BasicValueEnum<'ctx>,
-    name_map: HashMap<String, BasicValueEnum<'ctx>>,
+    v: RefCell<BasicValueEnum<'ctx>>,
+    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
@@ -59,7 +59,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_ty,
             ptr_ty,
             int32_zero,
-            v: int32_zero.into(),
+            v: RefCell::new(int32_zero.into()),
             name_map: Default::default(),
         }
     }
@@ -79,8 +79,9 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let calc_write_fn =
             self.module
                 .add_function("calc_write", calc_write_fn_type, Some(Linkage::External));
+        let v= *self.v.borrow();
         self.builder
-            .build_call(calc_write_fn, &[self.v.into()], "call_calc_write")?;
+            .build_call(calc_write_fn, &[v.into()], "call_calc_write")?;
 
         self.builder.build_return(Some(&self.int32_zero))?;
         Ok(())
@@ -94,13 +95,13 @@ impl<'a> Default for ToIRVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
+    fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()> {
         match ast {
             Ast::BinaryOp(node) => {
                 node.lhs_expr.unwrap().accept(exprs, self)?;
-                let left = self.v;
+                let left = *self.v.borrow();
                 node.rhs_expr.unwrap().accept(exprs, self)?;
-                let right = self.v;
+                let right = *self.v.borrow();
 
                 let op = match node.op {
                     Operator::Plus => Builder::build_int_nsw_add,
@@ -108,21 +109,23 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     Operator::Mul => Builder::build_int_nsw_mul,
                     Operator::Div => Builder::build_int_signed_div,
                 };
-                self.v = op(
+                
+                let v = op(
                     &self.builder,
                     left.into_int_value(),
                     right.into_int_value(),
                     "",
                 )?
                 .into();
+                *self.v.borrow_mut() = v;
             }
             Ast::Factor(factor) => match factor.kind {
                 ValueKind::Ident => {
                     let val = factor.text[factor.span.start..factor.span.end]
                         .iter()
                         .collect::<String>();
-                    if let Some(val) = self.name_map.get(&val) {
-                        self.v = *val;
+                    if let Some(&val) = self.name_map.borrow().get(&val) {
+                        *self.v.borrow_mut() = val;
                     } else {
                         panic!("Variable not found");
                     }
@@ -132,7 +135,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                         .iter()
                         .collect::<String>();
                     let intval = val.parse::<i64>().expect("Invalid integer");
-                    self.v = self.int32_ty.const_int(intval as u64, true).into();
+                    let v = self.int32_ty.const_int(intval as u64, true).into();
+                    *self.v.borrow_mut() = v;
                 }
             },
             Ast::WithDecl(node) => {
@@ -160,7 +164,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                         &[global_str.as_pointer_value().into()],
                         "",
                     )?;
-                    self.name_map
+                    self.name_map.borrow_mut()
                         .insert(var, call.try_as_basic_value().left().unwrap());
                 }
                 node.expr_index.unwrap().accept(exprs, self)?;
@@ -178,7 +182,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);
@@ -189,8 +193,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
 #[derive(Debug, Default)]
 pub struct DeclCheck {
     //pub scope: HashSet<&'a [char]>,
-    pub scope: HashSet<Span>,
-    pub has_error: bool,
+    pub scope: RefCell<HashSet<Span>>,
+    pub has_error: Cell<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,24 +206,24 @@ pub enum ErrorType {
 impl DeclCheck {
     pub fn new() -> Self {
         DeclCheck {
-            scope: HashSet::new(),
-            has_error: false,
+            scope: RefCell::new(HashSet::new()),
+            has_error: Cell::new(false),
         }
     }
 
-    pub fn error(&mut self, err: ErrorType, s: Span) {
+    pub fn error(&self, err: ErrorType, s: Span) {
         let tmp = if err == ErrorType::Twice {
             "twice"
         } else {
             "not"
         };
         println!("Variable {:?} is {} declared", s, tmp);
-        self.has_error = true;
+        self.has_error.set(true);
     }
 }
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
-    fn inner_visit(&mut self, exprs: &mut Vec<Expr>, node: &mut Ast) -> Result<()> {
+    fn inner_visit(&self, exprs: &mut Vec<Expr>, node: &mut Ast) -> Result<()> {
         match node {
             Ast::BinaryOp(node) => {
                 // TODO: check for existence of ExprIndex in exprs
@@ -227,29 +231,30 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
                     if let Some(mut expr) = scan {
                         expr.accept(exprs, self)?;
                     } else {
-                        self.has_error = true;
+                        //*self.has_error.get_mut() = true;
+                        self.has_error.set(true);
                     }
                 }
             }
             Ast::Factor(node) => {
-                if node.kind == ValueKind::Ident && !self.scope.contains(&node.span) {
+                if node.kind == ValueKind::Ident && !self.scope.borrow().contains(&node.span) {
                     self.error(ErrorType::Not, node.span);
                 }
             }
             Ast::WithDecl(node) => {
                 for i in node.vars.iter() {
-                    if self.scope.contains(i) {
+                    if self.scope.borrow().contains(i) {
                         self.error(ErrorType::Twice, *i);
                         bail!("Variable declared twice");
                     }
                     //let i = Box::leak(i.to_vec().into_boxed_slice());
-                    self.scope.insert(*i);
+                    self.scope.borrow_mut().insert(*i);
                 }
 
                 if let Some(mut expr) = node.expr_index {
                     expr.accept(exprs, self)?;
                 } else {
-                    self.has_error = true;
+                    self.has_error.set(true);
                 }
             }
             Ast::Index(_) => {}
@@ -257,7 +262,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit(&mut self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
+    fn visit(&self, exprs: &mut Vec<Expr>, ast: &mut dyn AstTrait) -> Result<()> {
         let mut tmp = ast.take();
         let res = self.inner_visit(exprs, &mut tmp);
         ast.replace(tmp);

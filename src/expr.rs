@@ -15,7 +15,7 @@ impl<'a> Default for Expr {
 }
 
 impl AstTrait for Expr {
-    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &mut dyn AstVisitorTrait<'a>) -> Result<()> {
+    fn accept<'a>(&mut self, exprs: &mut Vec<Expr>, v: &dyn AstVisitorTrait<'a>) -> Result<()> {
         match self {
             Expr::BinaryOp(ast) => AstTrait::accept(ast, exprs, v),
             Expr::Factor(ast) => AstTrait::accept(ast, exprs, v),
