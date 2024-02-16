@@ -29,7 +29,6 @@ impl<'a> Default for AstVisitor<'a> {
 
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
-    //fn inner_visit(&self, exprs: &mut Vec<Expr>, ast: &mut Ast) -> Result<()>;
     fn visit(&self, exprs: &State, ast: &impl AstTrait) -> Result<()>;
 }
 
