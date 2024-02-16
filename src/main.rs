@@ -70,7 +70,7 @@ fn main() {
     let Some(mut ast) = ast else {
         return;
     };
-    debug_ast(&ast, &state);
+//    debug_ast(&ast, &state);
     let semantic = Sema;
 
     if semantic.semantic(&state, &mut ast) {
