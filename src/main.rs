@@ -16,7 +16,6 @@ use inkwell::context::Context;
 use refslice::RefSlice;
 use std::cell::RefCell;
 use std::collections::HashSet;
-use std::ops::Range;
 use std::rc::Rc;
 
 pub struct Sema;
@@ -48,27 +47,8 @@ impl<'a> CodeGen<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
-}
 
-impl From<Range<usize>> for Span {
-    fn from(range: Range<usize>) -> Self {
-        Span {
-            start: range.start,
-            end: range.end,
-        }
-    }
-}
-
-impl Span {
-    pub fn new(start: usize, end: usize) -> Self {
-        Span { start, end }
-    }
-}
-
+#[derive(Debug)]
 pub struct State {
     pub exprs: RefCell<Vec<Expr>>,
 }
