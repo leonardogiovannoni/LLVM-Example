@@ -127,9 +127,6 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         let factor_fn = |factor: &Factor| {
             match factor.kind {
                 ValueKind::Ident => {
-                    /*let val = factor.text[factor.span.start..factor.span.end]
-                    .iter()
-                    .collect::<String>();*/
                     let val = factor.text.iter().collect::<String>();
                     if let Some(&val) = self.name_map.borrow().get(&val) {
                         *self.v.borrow_mut() = val;
@@ -138,9 +135,6 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     }
                 }
                 _ => {
-                    //let val = factor.text[factor.span.start..factor.span.end]
-                    //    .iter()
-                    //    .collect::<String>();
                     let val = factor.text.iter().collect::<String>();
                     let intval = val.parse::<i64>().expect("Invalid integer");
                     let v = self.int32_ty.const_int(intval as u64, true).into();

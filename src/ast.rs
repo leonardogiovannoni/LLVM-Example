@@ -111,13 +111,6 @@ pub enum Ast {
 #[enum_dispatch(Ast)]
 pub trait AstTrait {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()>;
-    fn callbacks_mut(
-        &mut self,
-        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
-    ) -> Result<()>;
 
     fn callbacks(
         &self,
@@ -139,22 +132,12 @@ impl AstTrait for BinaryOp {
         v.visit(exprs, self)
     }
 
-    fn callbacks_mut(
-        &mut self,
-        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        bin_op.unwrap()(self)
-    }
-
     fn callbacks(
         &self,
         bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
     ) -> Result<()> {
         bin_op.unwrap()(self)
     }
@@ -165,22 +148,12 @@ impl AstTrait for Factor {
         v.visit(exprs, self)
     }
 
-    fn callbacks_mut(
-        &mut self,
-        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        factor.unwrap()(self)
-    }
-
     fn callbacks(
         &self,
-        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
         factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
     ) -> Result<()> {
         factor.unwrap()(self)
     }
@@ -191,22 +164,12 @@ impl AstTrait for WithDecl {
         v.visit(exprs, self)
     }
 
-    fn callbacks_mut(
-        &mut self,
-        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        with_decl.unwrap()(self)
-    }
-
     fn callbacks(
         &self,
-        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
         with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
+        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
     ) -> Result<()> {
         with_decl.unwrap()(self)
     }
@@ -217,21 +180,11 @@ impl AstTrait for ExprIndex {
         v.visit(exprs, self)
     }
 
-    fn callbacks_mut(
-        &mut self,
-        bin_op: Option<impl FnOnce(&mut BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&mut Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&mut WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&mut ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        index.unwrap()(self)
-    }
-
     fn callbacks(
         &self,
-        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
+        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
+        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
+        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
         index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
     ) -> Result<()> {
         index.unwrap()(self)
