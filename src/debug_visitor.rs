@@ -30,9 +30,10 @@ impl<'a> DebugAstVisitor<'a> {
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
             Expr::Factor(factor) => {
-                let val = factor.text[factor.span.start..factor.span.end]
-                    .iter()
-                    .collect::<String>();
+                /*  let val = factor.text[factor.span.start..factor.span.end]
+                .iter()
+                .collect::<String>();*/
+                let val = factor.text.iter().collect::<String>();
                 let kind = format!("{:?}", factor.kind);
                 format!("Factor(kind: {}, val: {})", kind, val)
             }
@@ -57,9 +58,10 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         };
 
         let factor_fn = |factor: &Factor| {
-            let val = factor.text[factor.span.start..factor.span.end]
-                .iter()
-                .collect::<String>();
+            /*let val = factor.text[factor.span.start..factor.span.end]
+            .iter()
+            .collect::<String>();*/
+            let val = factor.text.iter().collect::<String>();
             let kind = format!("{:?}", factor.kind);
             println!("Factor(kind: {}, val: {})", kind, val);
             Ok(())

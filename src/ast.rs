@@ -1,5 +1,3 @@
-
-
 use crate::*;
 
 use anyhow::Result;
@@ -44,34 +42,28 @@ pub enum ValueKind {
 #[derive(Debug, Clone)]
 pub struct Factor {
     pub kind: ValueKind,
-    pub text: Rc<[char]>,
-    pub span: Span,
+    pub text: RefSlice<char>,
 }
 
 impl Default for Factor {
     fn default() -> Self {
         Self {
             kind: Default::default(),
-            text: Rc::new([]),
-            span: Span::new(0, 0),
+            text: RefSlice::from([]),
         }
     }
 }
 
 impl Factor {
-    pub fn new(v: ValueKind, text: Rc<[char]>, span: Span) -> Factor {
-        Factor {
-            kind: v,
-            text,
-            span,
-        }
+    pub fn new(v: ValueKind, text: RefSlice<char>) -> Factor {
+        Factor { kind: v, text }
     }
 }
 
 #[derive(Debug)]
 pub struct WithDecl {
-    pub vars: Vec<Span>,
-    pub text: Rc<[char]>,
+    pub vars: Vec<RefSlice<char>>,
+    pub text: RefSlice<char>,
     pub expr_index: Option<ExprIndex>,
 }
 
@@ -79,14 +71,18 @@ impl Default for WithDecl {
     fn default() -> Self {
         Self {
             vars: Default::default(),
-            text: Rc::new([]),
+            text: RefSlice::from([]),
             expr_index: Default::default(),
         }
     }
 }
 
 impl WithDecl {
-    pub fn new(vars: Vec<Span>, text: Rc<[char]>, expr_index: Option<ExprIndex>) -> WithDecl {
+    pub fn new(
+        vars: Vec<RefSlice<char>>,
+        text: RefSlice<char>,
+        expr_index: Option<ExprIndex>,
+    ) -> WithDecl {
         WithDecl {
             vars,
             text,
@@ -99,9 +95,7 @@ impl WithDecl {
     }
 
     pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
-        self.vars
-            .iter()
-            .map(|v| self.text.get(v.start..v.end).unwrap())
+        self.vars.iter().map(|v| v.as_ref())
     }
 }
 

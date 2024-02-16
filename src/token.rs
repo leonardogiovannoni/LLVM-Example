@@ -1,4 +1,5 @@
-use crate::Span;
+use refslice::RefSlice;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
@@ -21,11 +22,11 @@ pub enum TokenKind {
 #[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub text: Span,
+    pub text: RefSlice<char>,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, text: Span) -> Self {
+    pub fn new(kind: TokenKind, text: RefSlice<char>) -> Self {
         Token { kind, text }
     }
 

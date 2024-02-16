@@ -4,14 +4,14 @@ pub struct Parser {
     pub lexer: Lexer,
     pub token: Token,
     pub has_error: bool,
-    pub text: Rc<[char]>,
+    pub text: RefSlice<char>,
 }
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: Rc<[char]>) -> Self {
+    pub fn new(lexer: Lexer, buf: RefSlice<char>) -> Self {
         let mut parser = Self {
             lexer,
-            token: Token::new(TokenKind::Unknown, Span::new(0, 0)),
+            token: Token::new(TokenKind::Unknown, RefSlice::from([])),
             has_error: false,
             text: buf,
         };
@@ -45,21 +45,22 @@ impl Parser {
         }
     }
 
-    pub fn parse_calc_begin(&mut self) -> Option<Vec<Span>> {
+    pub fn parse_calc_begin(&mut self) -> Option<Vec<RefSlice<char>>> {
         let mut vars = Vec::new();
         if self.token.is(TokenKind::KWWith) {
             self.advance();
             if self.expect(TokenKind::Ident) {
                 return None;
             }
-            vars.push(Span::new(self.token.text.start, self.token.text.end));
+
+            vars.push(self.token.text.index(..));
             self.advance();
             while self.token.is(TokenKind::Comma) {
                 self.advance();
                 if self.expect(TokenKind::Ident) {
                     return None;
                 }
-                vars.push(Span::new(self.token.text.start, self.token.text.end));
+                vars.push(self.token.text.index(..));
                 self.advance();
             }
 
@@ -72,8 +73,9 @@ impl Parser {
 
     pub fn parse_calc_mid(&mut self, exprs: &State) -> Option<Ast> {
         let vars = self.parse_calc_begin()?;
-        let text = Rc::clone(&self.text);
-        let e = self.parse_expr(&text, exprs)?;
+        //let text = Rc::clone(&self.text);
+        let text = self.text.index(..);
+        let e = self.parse_expr(&text.as_ref(), exprs)?;
         if self.expect(TokenKind::Eoi) {
             return None;
         }
@@ -81,7 +83,7 @@ impl Parser {
         if vars.is_empty() {
             Some(e.into())
         } else {
-            let buf = Rc::clone(&self.text);
+            let buf = text.index(..);
             Some(WithDecl::new(vars, buf, Some(e)).into())
         }
     }
@@ -135,20 +137,18 @@ impl Parser {
         let exprs = &state.exprs;
         match self.token.kind {
             TokenKind::Ident => {
-                let text = Rc::clone(&self.text);
-                let span = self.token.text;
+                let text = self.token.text.index(..);
                 exprs
                     .borrow_mut()
-                    .push(Expr::Factor(Factor::new(ValueKind::Ident, text, span)));
+                    .push(Expr::Factor(Factor::new(ValueKind::Ident, text)));
                 res = Some(ExprIndex(exprs.borrow().len() - 1));
                 self.advance();
             }
             TokenKind::Number => {
-                let text = Rc::clone(&self.text);
-                let span = self.token.text;
+                let text = self.text.index(..);
                 exprs
                     .borrow_mut()
-                    .push(Expr::Factor(Factor::new(ValueKind::Number, text, span)));
+                    .push(Expr::Factor(Factor::new(ValueKind::Number, text)));
                 res = Some(ExprIndex(exprs.borrow().len() - 1));
                 self.advance();
             }

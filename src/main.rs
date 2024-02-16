@@ -13,6 +13,7 @@ use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
 use inkwell::context::Context;
+use refslice::RefSlice;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::ops::Range;
@@ -76,8 +77,9 @@ fn main() {
     let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
     let input = Rc::from(input);
-    let lexer = Lexer::new(Rc::clone(&input));
-    let mut parser = Parser::new(lexer, Rc::clone(&input));
+    let input = RefSlice::from(input);
+    let lexer = Lexer::new(RefSlice::clone(&input));
+    let mut parser = Parser::new(lexer, RefSlice::clone(&input));
     let state = State {
         exprs: RefCell::new(Vec::new()),
     };

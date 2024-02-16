@@ -127,9 +127,10 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         let factor_fn = |factor: &Factor| {
             match factor.kind {
                 ValueKind::Ident => {
-                    let val = factor.text[factor.span.start..factor.span.end]
-                        .iter()
-                        .collect::<String>();
+                    /*let val = factor.text[factor.span.start..factor.span.end]
+                    .iter()
+                    .collect::<String>();*/
+                    let val = factor.text.iter().collect::<String>();
                     if let Some(&val) = self.name_map.borrow().get(&val) {
                         *self.v.borrow_mut() = val;
                     } else {
@@ -137,9 +138,10 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                     }
                 }
                 _ => {
-                    let val = factor.text[factor.span.start..factor.span.end]
-                        .iter()
-                        .collect::<String>();
+                    //let val = factor.text[factor.span.start..factor.span.end]
+                    //    .iter()
+                    //    .collect::<String>();
+                    let val = factor.text.iter().collect::<String>();
                     let intval = val.parse::<i64>().expect("Invalid integer");
                     let v = self.int32_ty.const_int(intval as u64, true).into();
                     *self.v.borrow_mut() = v;
@@ -204,7 +206,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
 
 #[derive(Debug, Default)]
 pub struct DeclCheck {
-    pub scope: RefCell<HashSet<Span>>,
+    pub scope: RefCell<HashSet<RefSlice<char>>>,
     pub has_error: Cell<bool>,
 }
 
@@ -222,7 +224,7 @@ impl DeclCheck {
         }
     }
 
-    pub fn error(&self, err: ErrorType, s: Span) {
+    pub fn error(&self, err: ErrorType, s: RefSlice<char>) {
         let tmp = if err == ErrorType::Twice {
             "twice"
         } else {
@@ -244,8 +246,8 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         };
 
         let factor_fn = |factor: &Factor| {
-            if factor.kind == ValueKind::Ident && !self.scope.borrow().contains(&factor.span) {
-                self.error(ErrorType::Not, factor.span);
+            if factor.kind == ValueKind::Ident && !self.scope.borrow().contains(&factor.text) {
+                self.error(ErrorType::Not, factor.text.index(..));
             }
             Ok(())
         };
@@ -253,10 +255,10 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         let with_decl_fn = |with_decl: &WithDecl| {
             for i in with_decl.vars.iter() {
                 if self.scope.borrow().contains(i) {
-                    self.error(ErrorType::Twice, *i);
+                    self.error(ErrorType::Twice, i.index(..));
                     bail!("Variable declared twice");
                 }
-                self.scope.borrow_mut().insert(*i);
+                self.scope.borrow_mut().insert(i.index(..));
             }
             Ok(())
         };

@@ -10,4 +10,5 @@ anyhow = "1.0.79"
 derive_more = "0.99.17"
 enum_dispatch = "0.3.12"
 inkwell = { version = "0.4.0", features = ["llvm17-0"] }
+refslice = { path = "refslice" }
 #llvm-sys = "170.0.1"
