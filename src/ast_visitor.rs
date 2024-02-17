@@ -18,11 +18,6 @@ pub enum AstVisitor<'a> {
     ToIRVisitor(ToIRVisitor<'a>),
 }
 
-impl<'a> Default for AstVisitor<'a> {
-    fn default() -> Self {
-        AstVisitor::DeclCheck(DeclCheck::new())
-    }
-}
 
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
