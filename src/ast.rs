@@ -43,7 +43,6 @@ pub struct Factor {
     pub text: RefSlice<char>,
 }
 
-
 impl Factor {
     pub fn new(v: ValueKind, text: RefSlice<char>) -> Factor {
         Factor { kind: v, text }
@@ -56,7 +55,6 @@ pub struct WithDecl {
     pub text: RefSlice<char>,
     pub expr_index: Option<ExprIndex>,
 }
-
 
 impl WithDecl {
     pub fn new(
@@ -93,7 +91,6 @@ pub enum Ast {
 pub trait AstTrait {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()>;
 }
-
 
 impl AstTrait for BinaryOp {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {

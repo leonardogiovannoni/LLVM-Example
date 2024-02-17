@@ -67,13 +67,13 @@ fn main() {
     if parser.has_error {
         return;
     }
-    let Some(mut ast) = ast else {
+    let Some(ast) = ast else {
         return;
     };
     debug_ast(&ast, &state);
     let semantic = Sema;
 
-    if semantic.semantic(&state, &mut ast) {
+    if semantic.semantic(&state, &ast) {
         println!("semantic error");
         return;
     }

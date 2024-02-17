@@ -18,7 +18,6 @@ pub enum AstVisitor<'a> {
     ToIRVisitor(ToIRVisitor<'a>),
 }
 
-
 #[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
     fn visit_binary_op(&self, exprs: &State, ast: &BinaryOp) -> Result<()>;
@@ -85,7 +84,6 @@ impl<'ctx> ToIRVisitor<'ctx> {
         Ok(())
     }
 }
-
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn visit_binary_op(&self, state: &State, bin_op: &BinaryOp) -> Result<()> {

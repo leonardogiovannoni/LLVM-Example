@@ -6,7 +6,6 @@ pub enum Expr {
     Factor(Factor),
 }
 
-
 impl AstTrait for Expr {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         match self {
