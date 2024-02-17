@@ -74,7 +74,7 @@ impl Parser {
     pub fn parse_calc_mid(&mut self, exprs: &State) -> Option<Ast> {
         let vars = self.parse_calc_begin()?;
         let text = self.text.index(..);
-        let e = self.parse_expr(&text.as_ref(), exprs)?;
+        let e = self.parse_expr(text.as_ref(), exprs)?;
         if self.expect(TokenKind::Eoi) {
             return None;
         }
