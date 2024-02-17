@@ -234,53 +234,6 @@ impl DeclCheck {
 }
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
-   /* fn visit(&self, state: &State, ast: &impl AstTrait) -> Result<()> {
-        let bin_op_fn = |bin_op: &BinaryOp| {
-            let lhs = bin_op.lhs_expr.unwrap();
-            let rhs = bin_op.rhs_expr.unwrap();
-            lhs.accept(state, self)?;
-            rhs.accept(state, self)?;
-            Ok(())
-        };
-
-        let factor_fn = |factor: &Factor| {
-            if factor.kind == ValueKind::Ident && !self.scope.borrow().contains(&factor.text) {
-                self.error(ErrorType::Not, factor.text.index(..));
-            }
-            Ok(())
-        };
-
-        let with_decl_fn = |with_decl: &WithDecl| {
-            for i in with_decl.vars.iter() {
-                if self.scope.borrow().contains(i) {
-                    self.error(ErrorType::Twice, i.index(..));
-                    bail!("Variable declared twice");
-                }
-                self.scope.borrow_mut().insert(i.index(..));
-            }
-            Ok(())
-        };
-
-        let index_fn = |index: &ExprIndex| {
-            let exprs = &state.exprs;
-            let tmp = exprs.borrow();
-            let e = tmp.get(index.0).unwrap();
-            let res = e.accept(state, self);
-            if res.is_err() {
-                return res;
-            }
-            Ok(())
-        };
-
-        ast.callbacks(
-            Some(bin_op_fn),
-            Some(factor_fn),
-            Some(with_decl_fn),
-            Some(index_fn),
-        )?;
-        Ok(())
-    }*/
-
     fn visit_binary_op(&self, state: &State, ast: &BinaryOp) -> Result<()> {
         let lhs = ast.lhs_expr.unwrap();
         let rhs = ast.rhs_expr.unwrap();
@@ -289,14 +242,14 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit_factor(&self, state: &State, ast: &Factor) -> Result<()> {
+    fn visit_factor(&self, _state: &State, ast: &Factor) -> Result<()> {
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&ast.text) {
             self.error(ErrorType::Not, ast.text.index(..));
         }
         Ok(())
     }
 
-    fn visit_with_decl(&self, state: &State, ast: &WithDecl) -> Result<()> {
+    fn visit_with_decl(&self, _state: &State, ast: &WithDecl) -> Result<()> {
         for i in ast.vars.iter() {
             if self.scope.borrow().contains(i) {
                 self.error(ErrorType::Twice, i.index(..));

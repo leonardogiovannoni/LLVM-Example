@@ -111,14 +111,6 @@ pub enum Ast {
 #[enum_dispatch(Ast)]
 pub trait AstTrait {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()>;
-
-    fn callbacks(
-        &self,
-        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
-    ) -> Result<()>;
 }
 
 impl Default for Ast {
@@ -131,31 +123,11 @@ impl AstTrait for BinaryOp {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         v.visit_binary_op(exprs, self)
     }
-
-    fn callbacks(
-        &self,
-        bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        bin_op.unwrap()(self)
-    }
 }
 
 impl AstTrait for Factor {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         v.visit_factor(exprs, self)
-    }
-
-    fn callbacks(
-        &self,
-        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        factor.unwrap()(self)
     }
 }
 
@@ -164,29 +136,10 @@ impl AstTrait for WithDecl {
         v.visit_with_decl(exprs, self)
     }
 
-    fn callbacks(
-        &self,
-        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        _index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        with_decl.unwrap()(self)
-    }
 }
 
 impl AstTrait for ExprIndex {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         v.visit_index(exprs, self)
-    }
-
-    fn callbacks(
-        &self,
-        _bin_op: Option<impl FnOnce(&BinaryOp) -> Result<()>>,
-        _factor: Option<impl FnOnce(&Factor) -> Result<()>>,
-        _with_decl: Option<impl FnOnce(&WithDecl) -> Result<()>>,
-        index: Option<impl FnOnce(&ExprIndex) -> Result<()>>,
-    ) -> Result<()> {
-        index.unwrap()(self)
     }
 }
