@@ -15,7 +15,7 @@ pub enum Operator {
     Div,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug)]
 pub struct BinaryOp {
     pub lhs_expr: Option<ExprIndex>,
     pub rhs_expr: Option<ExprIndex>,
@@ -39,7 +39,7 @@ pub enum ValueKind {
     Number,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Factor {
     pub kind: ValueKind,
     pub text: RefSlice<char>,
