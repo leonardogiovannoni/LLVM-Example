@@ -45,14 +45,6 @@ pub struct Factor {
     pub text: RefSlice<char>,
 }
 
-impl Default for Factor {
-    fn default() -> Self {
-        Self {
-            kind: Default::default(),
-            text: RefSlice::from([]),
-        }
-    }
-}
 
 impl Factor {
     pub fn new(v: ValueKind, text: RefSlice<char>) -> Factor {
@@ -67,15 +59,6 @@ pub struct WithDecl {
     pub expr_index: Option<ExprIndex>,
 }
 
-impl Default for WithDecl {
-    fn default() -> Self {
-        Self {
-            vars: Default::default(),
-            text: RefSlice::from([]),
-            expr_index: Default::default(),
-        }
-    }
-}
 
 impl WithDecl {
     pub fn new(
@@ -135,7 +118,6 @@ impl AstTrait for WithDecl {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         v.visit_with_decl(exprs, self)
     }
-
 }
 
 impl AstTrait for ExprIndex {

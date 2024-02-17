@@ -1,6 +1,7 @@
 mod ast;
 mod ast_visitor;
 mod debug_visitor;
+mod decl_check;
 mod expr;
 mod lexer;
 mod parser;
@@ -8,6 +9,7 @@ mod token;
 use crate::ast::*;
 use crate::ast_visitor::*;
 use crate::debug_visitor::*;
+use crate::decl_check::*;
 use crate::expr::*;
 use crate::lexer::*;
 use crate::parser::*;
@@ -15,13 +17,12 @@ use crate::token::*;
 use inkwell::context::Context;
 use refslice::RefSlice;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic(&self, exprs: &State, ast: &mut Ast) -> bool {
+    pub fn semantic(&self, exprs: &State, ast: &Ast) -> bool {
         let check = DeclCheck::new();
         ast.accept(exprs, &check).unwrap();
         check.has_error.get()
@@ -46,7 +47,6 @@ impl<'a> CodeGen<'a> {
         println!("{}", s);
     }
 }
-
 
 #[derive(Debug)]
 pub struct State {

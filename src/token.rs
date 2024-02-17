@@ -1,6 +1,5 @@
 use refslice::RefSlice;
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
 pub enum TokenKind {
