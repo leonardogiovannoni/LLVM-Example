@@ -129,7 +129,7 @@ impl Default for Ast {
 
 impl AstTrait for BinaryOp {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit(exprs, self)
+        v.visit_binary_op(exprs, self)
     }
 
     fn callbacks(
@@ -145,7 +145,7 @@ impl AstTrait for BinaryOp {
 
 impl AstTrait for Factor {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit(exprs, self)
+        v.visit_factor(exprs, self)
     }
 
     fn callbacks(
@@ -161,7 +161,7 @@ impl AstTrait for Factor {
 
 impl AstTrait for WithDecl {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit(exprs, self)
+        v.visit_with_decl(exprs, self)
     }
 
     fn callbacks(
@@ -177,7 +177,7 @@ impl AstTrait for WithDecl {
 
 impl AstTrait for ExprIndex {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit(exprs, self)
+        v.visit_index(exprs, self)
     }
 
     fn callbacks(
