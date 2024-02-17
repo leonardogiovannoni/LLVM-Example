@@ -128,7 +128,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             Ok(())
     }
 
-    fn visit_factor(&self, state: &State, factor: &Factor) -> Result<()> {
+    fn visit_factor(&self, _state: &State, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
                 let val = factor.text.iter().collect::<String>();
@@ -140,8 +140,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             }
             _ => {
                 let val = factor.text.iter().collect::<String>();
-                let intval = val.parse::<i64>().expect("Invalid integer");
-                let v = self.int32_ty.const_int(intval as u64, true).into();
+                let intval = val.parse().expect("Invalid integer");
+                let v = self.int32_ty.const_int(intval, true).into();
                 *self.v.borrow_mut() = v;
             }
         }
