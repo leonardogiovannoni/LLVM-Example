@@ -3,12 +3,11 @@ use crate::*;
 use anyhow::Result;
 use enum_dispatch::enum_dispatch;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ExprIndex(pub usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
-    #[default]
     Plus,
     Minus,
     Mul,
@@ -32,9 +31,8 @@ impl BinaryOp {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueKind {
-    #[default]
     Ident,
     Number,
 }
@@ -96,11 +94,6 @@ pub trait AstTrait {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()>;
 }
 
-impl Default for Ast {
-    fn default() -> Self {
-        Ast::Index(ExprIndex::default())
-    }
-}
 
 impl AstTrait for BinaryOp {
     fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {

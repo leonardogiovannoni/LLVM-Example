@@ -10,7 +10,7 @@ use crate::{
     Ast, AstTrait, AstVisitorTrait, BinaryOp, ExprIndex, Factor, State, ValueKind, WithDecl,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DeclCheck {
     pub scope: RefCell<HashSet<RefSlice<char>>>,
     pub has_error: Cell<bool>,
