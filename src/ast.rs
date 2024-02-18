@@ -57,7 +57,7 @@ impl WithDecl {
         vars: Vec<RefSlice<char>>,
         text: RefSlice<char>,
         expr_index: Option<Rc<Expr>>,
-    ) -> WithDecl {
+    ) -> Self {
         WithDecl {
             vars,
             text,
@@ -68,6 +68,12 @@ impl WithDecl {
     pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
         self.vars.iter().map(|v| v.as_ref())
     }
+}
+
+#[derive(Debug)]
+pub enum Expr {
+    BinaryOp(BinaryOp),
+    Factor(Factor),
 }
 
 #[derive(Debug)]
