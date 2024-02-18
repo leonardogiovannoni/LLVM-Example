@@ -73,8 +73,7 @@ impl Parser {
 
     pub fn parse_calc_mid(&mut self) -> Option<Ast> {
         let vars = self.parse_calc_begin()?;
-        let text = self.text.index(..);
-        let e = self.parse_expr(text.as_ref())?;
+        let e = self.parse_expr()?;
         if self.expect(TokenKind::Eoi) {
             return None;
         }
@@ -82,7 +81,7 @@ impl Parser {
         if vars.is_empty() {
             Some(e.into())
         } else {
-            let buf = text.index(..);
+            let buf = self.text.index(..);
             Some(WithDecl::new(vars, buf, Some(e)).into())
         }
     }
@@ -96,8 +95,8 @@ impl Parser {
         })
     }
 
-    pub fn parse_expr(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
-        let mut left = self.parse_term(buf);
+    pub fn parse_expr(&mut self) -> Option<Rc<Expr>> {
+        let mut left = self.parse_term();
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
                 TokenKind::Plus => Operator::Plus,
@@ -105,7 +104,7 @@ impl Parser {
                 _ => unreachable!(),
             };
             self.advance();
-            let right = self.parse_term(buf);
+            let right = self.parse_term();
             let binary_op = BinaryOp::new(left, right, op);
             let id = Rc::new(Expr::BinaryOp(binary_op));
             left = Some(id);
@@ -113,15 +112,15 @@ impl Parser {
         left
     }
 
-    pub fn parse_term(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
-        let mut left = self.parse_factor(buf);
+    pub fn parse_term(&mut self) -> Option<Rc<Expr>> {
+        let mut left = self.parse_factor();
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
                 TokenKind::Star => Operator::Mul,
                 _ => Operator::Div,
             };
             self.advance();
-            let right = self.parse_factor(buf);
+            let right = self.parse_factor();
             let binary_op = BinaryOp::new(left, right, op);
             let binary_op = Rc::new(Expr::BinaryOp(binary_op));
             left = Some(binary_op);
@@ -129,7 +128,7 @@ impl Parser {
         left
     }
 
-    pub fn parse_factor(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
+    pub fn parse_factor(&mut self) -> Option<Rc<Expr>> {
         let mut res = None;
         match self.token.kind {
             TokenKind::Ident => {
@@ -139,45 +138,29 @@ impl Parser {
                 self.advance();
             }
             TokenKind::Number => {
-                let text = self.text.index(..);
+                let text = self.token.text.index(..);
                 let id = Rc::new(Expr::Factor(Factor::new(ValueKind::Number, text)));
                 res = Some(id);
                 self.advance();
             }
             TokenKind::LParen => {
                 self.advance();
-                res = self.parse_expr(buf);
+                res = self.parse_expr();
                 if !self.consume(TokenKind::RParen) {
-                    if res.is_some() {
-                        self.error();
-                    }
-                    while !self.token.is_one_of(&[
-                        TokenKind::Eoi,
-                        TokenKind::RParen,
-                        TokenKind::Slash,
-                        TokenKind::Star,
-                        TokenKind::Plus,
-                        TokenKind::Minus,
-                    ]) {
-                        self.advance();
-                    }
+                    return res;
                 }
             }
             _ => {
-                if res.is_some() {
-                    self.error();
-                }
 
-                loop {
-                    match self.token.kind {
-                        TokenKind::Eoi
-                        | TokenKind::RParen
-                        | TokenKind::Slash
-                        | TokenKind::Star
-                        | TokenKind::Plus
-                        | TokenKind::Minus => break,
-                        _ => self.advance(),
-                    }
+                while !self.token.is_one_of(&[
+                    TokenKind::Eoi,
+                    TokenKind::RParen,
+                    TokenKind::Slash,
+                    TokenKind::Star,
+                    TokenKind::Plus,
+                    TokenKind::Minus,
+                ]) {
+                    self.advance();
                 }
             }
         }
