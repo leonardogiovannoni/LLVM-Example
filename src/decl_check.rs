@@ -72,11 +72,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         let exprs = &state.exprs;
         let tmp = exprs.borrow();
         let e = tmp.get(ast.0).unwrap();
-        let res = e.accept(state, self);
-        if res.is_err() {
-            return res;
-        }
-        Ok(())
+        e.accept(state, self)
     }
 
     fn visit(&self, state: &State, ast: &Ast) -> Result<()> {

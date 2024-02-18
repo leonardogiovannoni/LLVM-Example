@@ -167,11 +167,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         let exprs = &state.exprs;
         let tmp = exprs.borrow();
         let e = tmp.get(index.0).unwrap();
-        let res = e.accept(state, self);
-        if res.is_err() {
-            return res;
-        }
-        Ok(())
+        e.accept(state, self)
     }
 
     fn visit(&self, state: &State, ast: &Ast) -> Result<()> {
