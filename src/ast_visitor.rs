@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::{Cell, RefCell}, collections::HashMap};
 
 use enum_dispatch::enum_dispatch;
 use inkwell::{
@@ -36,7 +36,7 @@ pub struct ToIRVisitor<'ctx> {
     int32_ty: inkwell::types::IntType<'ctx>,
     ptr_ty: inkwell::types::PointerType<'ctx>,
     int32_zero: inkwell::values::IntValue<'ctx>,
-    v: RefCell<BasicValueEnum<'ctx>>,
+    v: Cell<BasicValueEnum<'ctx>>,
     name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
 }
 
@@ -56,7 +56,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_ty,
             ptr_ty,
             int32_zero,
-            v: RefCell::new(int32_zero.into()),
+            v: Cell::new(int32_zero.into()),
             name_map: Default::default(),
         }
     }
@@ -76,7 +76,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let calc_write_fn =
             self.module
                 .add_function("calc_write", calc_write_fn_type, Some(Linkage::External));
-        let v = *self.v.borrow();
+        let v = self.v.get();
         self.builder
             .build_call(calc_write_fn, &[v.into()], "call_calc_write")?;
 
@@ -94,9 +94,9 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .rhs_expr
             .ok_or(anyhow::anyhow!("rhs does not exist"))?;
         lhs.accept(state, self)?;
-        let left = *self.v.borrow();
+        let left = self.v.get();
         rhs.accept(state, self)?;
-        let right = *self.v.borrow();
+        let right = self.v.get();
 
         let op = match bin_op.op {
             Operator::Plus => Builder::build_int_nsw_add,
@@ -112,7 +112,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             "",
         )?
         .into();
-        *self.v.borrow_mut() = v;
+        self.v.set(v);
         Ok(())
     }
 
@@ -121,7 +121,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             ValueKind::Ident => {
                 let val = factor.text.iter().collect::<String>();
                 if let Some(&val) = self.name_map.borrow().get(&val) {
-                    *self.v.borrow_mut() = val;
+                    self.v.set(val);
                 } else {
                     panic!("Variable not found");
                 }
@@ -130,7 +130,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 let val = factor.text.iter().collect::<String>();
                 let intval = val.parse().expect("Invalid integer");
                 let v = self.int32_ty.const_int(intval, true).into();
-                *self.v.borrow_mut() = v;
+                self.v.set(v);
             }
         }
         Ok(())
