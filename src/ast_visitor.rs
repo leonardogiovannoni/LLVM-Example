@@ -54,6 +54,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             name_map: Default::default(),
         }
     }
+    
     pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
         let main_fn_type = self
             .int32_ty

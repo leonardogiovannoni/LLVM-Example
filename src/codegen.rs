@@ -7,7 +7,7 @@ use crate::{Ast, AstTrait, DeclCheck, State, ToIRVisitor};
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic(&self, exprs: &State, ast: &mut Ast) -> bool {
+    pub fn semantic(&self, exprs: &State, ast: &Ast) -> bool {
         let check = DeclCheck::new();
         ast.accept(exprs, &check).unwrap();
         check.has_error.get()
@@ -23,7 +23,7 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, exprs: &State, mut ast: Ast) {
+    pub fn compile(&self, exprs: &State, ast: Ast) {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
