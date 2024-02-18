@@ -151,7 +151,6 @@ impl Parser {
                 }
             }
             _ => {
-
                 while !self.token.is_one_of(&[
                     TokenKind::Eoi,
                     TokenKind::RParen,
