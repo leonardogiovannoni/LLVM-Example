@@ -2,8 +2,6 @@ use crate::*;
 
 use anyhow::Result;
 
-
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
     Plus,
@@ -67,10 +65,6 @@ impl WithDecl {
         }
     }
 
-    pub fn get_expr(&self) -> Option<Rc<Expr>> {
-        self.expr_index.clone()
-    }
-
     pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
         self.vars.iter().map(|v| v.as_ref())
     }
@@ -84,8 +78,12 @@ pub enum Ast {
     Index(Rc<Expr>),
 }
 
-impl Ast {
-    pub fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+pub trait AstTrait {
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()>;
+}
+
+impl AstTrait for Ast {
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         match self {
             Ast::BinaryOp(ast) => ast.accept(v),
             Ast::Factor(ast) => ast.accept(v),
@@ -93,13 +91,6 @@ impl Ast {
             Ast::Index(ast) => ast.accept(v),
         }
     }
-}
-
-
-
-//#[enum_dispatch(Ast)]
-pub trait AstTrait {
-    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()>;
 }
 
 impl AstTrait for BinaryOp {
