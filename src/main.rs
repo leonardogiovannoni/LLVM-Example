@@ -19,7 +19,9 @@ use anyhow::Result;
 use inkwell::context::Context;
 use refslice::RefSlice;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::atomic::AtomicUsize;
 pub struct Sema;
 
 impl Sema {
@@ -50,9 +52,40 @@ impl<'a> CodeGen<'a> {
     }
 }
 
+use dashmap::DashMap;
+
+
+#[derive(Debug)]
+pub struct ExprArena {
+    exprs: DashMap<usize, RefCell<Expr>>,
+    next_index: AtomicUsize,
+}
+
+impl ExprArena {
+    pub fn new() -> Self {
+        ExprArena {
+            exprs: DashMap::new(),
+            next_index: AtomicUsize::new(1),
+        }
+    }
+
+    pub fn insert(&self, expr: Expr) -> ExprIndex {
+        let rv = self.next_index.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let expr = RefCell::new(expr);
+        self.exprs.insert(rv, expr);
+        ExprIndex(rv)
+    }
+
+    pub fn get(&self, index: ExprIndex) -> Option<impl Deref<Target = RefCell<Expr>> + '_> {
+        self.exprs.get(&index.0)
+    }
+}
+
+
+
 #[derive(Debug)]
 pub struct State {
-    pub exprs: RefCell<Vec<Expr>>,
+    pub exprs: ExprArena,
 }
 
 fn routine() -> Result<()> {
@@ -63,7 +96,7 @@ fn routine() -> Result<()> {
     let lexer = Lexer::new(RefSlice::clone(&input));
     let mut parser = Parser::new(lexer, RefSlice::clone(&input));
     let state = State {
-        exprs: RefCell::new(Vec::new()),
+        exprs: ExprArena::new(),
     };
     let ast = parser.parse(&state);
     if parser.has_error {

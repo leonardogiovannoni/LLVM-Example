@@ -175,8 +175,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
 
     fn visit_index(&self, state: &State, index: &ExprIndex) -> Result<()> {
         let exprs = &state.exprs;
-        let tmp = exprs.borrow();
-        let e = tmp.get(index.0).unwrap();
+        let e = exprs.get(*index).unwrap();
+        let e = e.borrow();
         e.accept(state, self)
     }
 

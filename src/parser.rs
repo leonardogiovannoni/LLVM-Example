@@ -108,8 +108,9 @@ impl Parser {
             self.advance();
             let right = self.parse_term(buf, state);
             let binary_op = BinaryOp::new(left, right, op);
-            exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
-            left = Some(ExprIndex(exprs.borrow().len() - 1));
+            let id = exprs.insert(Expr::BinaryOp(binary_op));
+            //exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
+            left = Some(id);
         }
         left
     }
@@ -125,8 +126,10 @@ impl Parser {
             let right = self.parse_factor(buf, state);
             let binary_op = BinaryOp::new(left, right, op);
             let exprs = &state.exprs;
-            exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
-            left = Some(ExprIndex(exprs.borrow().len() - 1));
+            let id = exprs.insert(Expr::BinaryOp(binary_op));
+            left = Some(id);
+            //exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
+            //left = Some(ExprIndex(exprs.borrow().len() - 1));
         }
         left
     }
@@ -137,18 +140,22 @@ impl Parser {
         match self.token.kind {
             TokenKind::Ident => {
                 let text = self.token.text.index(..);
-                exprs
+               /*  exprs
                     .borrow_mut()
                     .push(Expr::Factor(Factor::new(ValueKind::Ident, text)));
-                res = Some(ExprIndex(exprs.borrow().len() - 1));
+                res = Some(ExprIndex(exprs.borrow().len() - 1));*/
+                let id = exprs.insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                res = Some(id);
                 self.advance();
             }
             TokenKind::Number => {
                 let text = self.text.index(..);
-                exprs
+               /*  exprs
                     .borrow_mut()
                     .push(Expr::Factor(Factor::new(ValueKind::Number, text)));
-                res = Some(ExprIndex(exprs.borrow().len() - 1));
+                res = Some(ExprIndex(exprs.borrow().len() - 1));*/
+                let id = exprs.insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
+                res = Some(id);
                 self.advance();
             }
             TokenKind::LParen => {

@@ -61,6 +61,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
+    #[inline(never)]
     fn visit_with_decl(&self, _state: &State, ast: &WithDecl) -> Result<()> {
         for i in ast.vars.iter() {
             if self.scope.borrow().contains(i) {
@@ -74,8 +75,9 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
 
     fn visit_index(&self, state: &State, ast: &ExprIndex) -> Result<()> {
         let exprs = &state.exprs;
-        let tmp = exprs.borrow();
-        let e = &tmp[ast.0];
+       // let e = &tmp[ast.0];
+        let e = exprs.get(*ast).unwrap();
+        let e = e.borrow();
         e.accept(state, self)
     }
 

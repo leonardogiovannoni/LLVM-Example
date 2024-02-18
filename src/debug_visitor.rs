@@ -11,12 +11,15 @@ impl<'a> DebugAstVisitor<'a> {
         }
     }
 
-    fn resolve_and_format_expr_index(&self, exprs: &[Expr], index: ExprIndex) -> String {
-        let expr = &exprs[index.0];
-        self.format_expr(exprs, expr)
+    fn resolve_and_format_expr_index(&self, exprs: &State, index: ExprIndex) -> String {
+        //let expr = &exprs[index.0];
+        //self.format_expr(exprs, expr)
+        let expr = exprs.exprs.get(index).unwrap();
+        let expr = expr.borrow();
+        self.format_expr(exprs, &*expr)
     }
 
-    fn format_expr(&self, exprs: &[Expr], expr: &Expr) -> String {
+    fn format_expr(&self, exprs: &State, expr: &Expr) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
                 let resolve_fn = |idx: Option<ExprIndex>| {
@@ -39,10 +42,9 @@ impl<'a> DebugAstVisitor<'a> {
 }
 
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
-    fn visit_binary_op(&self, exprs: &State, bin_op: &BinaryOp) -> Result<()> {
-        let exprs = &exprs.exprs;
+    fn visit_binary_op(&self, state: &State, bin_op: &BinaryOp) -> Result<()> {
         let get_pretty_name = |idx: Option<ExprIndex>| {
-            idx.map(|idx| self.resolve_and_format_expr_index(&exprs.borrow(), idx))
+            idx.map(|idx| self.resolve_and_format_expr_index(state, idx))
                 .map(|expr| format!("Some({})", expr))
                 .unwrap_or_else(|| "None".to_string())
         };
@@ -60,15 +62,14 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         Ok(())
     }
 
-    fn visit_with_decl(&self, exprs: &State, with_decl: &WithDecl) -> Result<()> {
+    fn visit_with_decl(&self, state: &State, with_decl: &WithDecl) -> Result<()> {
         let vars = with_decl
             .vars_iter()
             .map(|v| v.iter().collect::<String>())
             .collect::<Vec<_>>();
-        let exprs = &exprs.exprs;
         let expr = with_decl
             .expr_index
-            .map(|idx| self.resolve_and_format_expr_index(&exprs.borrow(), idx));
+            .map(|idx| self.resolve_and_format_expr_index(state, idx));
         let expr = expr
             .map(|expr| format!("Some({})", expr))
             .unwrap_or_else(|| "None".to_string());
