@@ -4,7 +4,7 @@ use enum_dispatch::enum_dispatch;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
-    values::{AnyValue, BasicValueEnum},
+    values::BasicValueEnum,
     AddressSpace,
 };
 
