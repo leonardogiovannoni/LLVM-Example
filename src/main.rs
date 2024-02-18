@@ -47,7 +47,7 @@ impl<'a> CodeGen<'a> {
     }
 }
 
-fn routine() -> Result<()> {
+fn run() -> Result<()> {
     let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
     let input = RefSlice::from(Rc::from(input));
@@ -72,7 +72,7 @@ fn routine() -> Result<()> {
 }
 
 fn main() {
-    if let Err(e) = routine() {
+    if let Err(e) = run() {
         eprintln!("error: {:?}", e);
     }
 }
