@@ -79,10 +79,10 @@ impl Parser {
         }
 
         if vars.is_empty() {
-            Some(e.into())
+            Some(Ast::Index(e.into()))
         } else {
             let buf = self.text.index(..);
-            Some(WithDecl::new(vars, buf, Some(e)).into())
+            Some(Ast::WithDecl(WithDecl::new(vars, buf, Some(e))))
         }
     }
 
