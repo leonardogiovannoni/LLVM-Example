@@ -7,10 +7,10 @@ pub enum Expr {
 }
 
 impl AstTrait for Expr {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         match self {
-            Expr::BinaryOp(ast) => AstTrait::accept(ast, exprs, v),
-            Expr::Factor(ast) => AstTrait::accept(ast, exprs, v),
+            Expr::BinaryOp(ast) => AstTrait::accept(ast, v),
+            Expr::Factor(ast) => AstTrait::accept(ast, v),
         }
     }
 }

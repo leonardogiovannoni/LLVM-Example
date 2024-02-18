@@ -71,10 +71,10 @@ impl Parser {
         Some(vars)
     }
 
-    pub fn parse_calc_mid(&mut self, exprs: &State) -> Option<Ast> {
+    pub fn parse_calc_mid(&mut self) -> Option<Ast> {
         let vars = self.parse_calc_begin()?;
         let text = self.text.index(..);
-        let e = self.parse_expr(text.as_ref(), exprs)?;
+        let e = self.parse_expr(text.as_ref())?;
         if self.expect(TokenKind::Eoi) {
             return None;
         }
@@ -87,8 +87,8 @@ impl Parser {
         }
     }
 
-    pub fn parse_calc(&mut self, exprs: &State) -> Option<Ast> {
-        self.parse_calc_mid(exprs).or_else(|| {
+    pub fn parse_calc(&mut self) -> Option<Ast> {
+        self.parse_calc_mid().or_else(|| {
             while self.token.kind != TokenKind::Eoi {
                 self.advance();
             }
@@ -96,9 +96,8 @@ impl Parser {
         })
     }
 
-    pub fn parse_expr(&mut self, buf: &[char], state: &State) -> Option<ExprIndex> {
-        let exprs = &state.exprs;
-        let mut left = self.parse_term(buf, state);
+    pub fn parse_expr(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
+        let mut left = self.parse_term(buf);
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
                 TokenKind::Plus => Operator::Plus,
@@ -106,61 +105,48 @@ impl Parser {
                 _ => unreachable!(),
             };
             self.advance();
-            let right = self.parse_term(buf, state);
+            let right = self.parse_term(buf);
             let binary_op = BinaryOp::new(left, right, op);
-            let id = exprs.insert(Expr::BinaryOp(binary_op));
-            //exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
+            let id = Rc::new(Expr::BinaryOp(binary_op));
             left = Some(id);
         }
         left
     }
 
-    pub fn parse_term(&mut self, buf: &[char], state: &State) -> Option<ExprIndex> {
-        let mut left = self.parse_factor(buf, state);
+    pub fn parse_term(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
+        let mut left = self.parse_factor(buf);
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
                 TokenKind::Star => Operator::Mul,
                 _ => Operator::Div,
             };
             self.advance();
-            let right = self.parse_factor(buf, state);
+            let right = self.parse_factor(buf);
             let binary_op = BinaryOp::new(left, right, op);
-            let exprs = &state.exprs;
-            let id = exprs.insert(Expr::BinaryOp(binary_op));
-            left = Some(id);
-            //exprs.borrow_mut().push(Expr::BinaryOp(binary_op));
-            //left = Some(ExprIndex(exprs.borrow().len() - 1));
+            let binary_op = Rc::new(Expr::BinaryOp(binary_op));
+            left = Some(binary_op);
         }
         left
     }
 
-    pub fn parse_factor(&mut self, buf: &[char], state: &State) -> Option<ExprIndex> {
+    pub fn parse_factor(&mut self, buf: &[char]) -> Option<Rc<Expr>> {
         let mut res = None;
-        let exprs = &state.exprs;
         match self.token.kind {
             TokenKind::Ident => {
                 let text = self.token.text.index(..);
-               /*  exprs
-                    .borrow_mut()
-                    .push(Expr::Factor(Factor::new(ValueKind::Ident, text)));
-                res = Some(ExprIndex(exprs.borrow().len() - 1));*/
-                let id = exprs.insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                let id = Rc::new(Expr::Factor(Factor::new(ValueKind::Ident, text)));
                 res = Some(id);
                 self.advance();
             }
             TokenKind::Number => {
                 let text = self.text.index(..);
-               /*  exprs
-                    .borrow_mut()
-                    .push(Expr::Factor(Factor::new(ValueKind::Number, text)));
-                res = Some(ExprIndex(exprs.borrow().len() - 1));*/
-                let id = exprs.insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
+                let id = Rc::new(Expr::Factor(Factor::new(ValueKind::Number, text)));
                 res = Some(id);
                 self.advance();
             }
             TokenKind::LParen => {
                 self.advance();
-                res = self.parse_expr(buf, state);
+                res = self.parse_expr(buf);
                 if !self.consume(TokenKind::RParen) {
                     if res.is_some() {
                         self.error();
@@ -198,8 +184,8 @@ impl Parser {
         res
     }
 
-    pub fn parse(&mut self, exprs: &State) -> Option<Ast> {
-        let ast = self.parse_calc(exprs);
+    pub fn parse(&mut self) -> Option<Ast> {
+        let ast = self.parse_calc();
         let _ = self.expect(TokenKind::Eoi);
         ast
     }

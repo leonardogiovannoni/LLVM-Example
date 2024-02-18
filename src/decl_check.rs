@@ -1,13 +1,14 @@
 use std::{
     cell::{Cell, RefCell},
     collections::HashSet,
+    rc::Rc,
 };
 
 use anyhow::{bail, Result};
 use refslice::RefSlice;
 
 use crate::{
-    Ast, AstTrait, AstVisitorTrait, BinaryOp, ExprIndex, Factor, State, ValueKind, WithDecl,
+    Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl,
 };
 
 #[derive(Debug)]
@@ -42,27 +43,28 @@ impl DeclCheck {
 }
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
-    fn visit_binary_op(&self, state: &State, ast: &BinaryOp) -> Result<()> {
+    fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()> {
         let lhs = ast
             .lhs_expr
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("lhs_expr is None"))?;
         let rhs = ast
             .rhs_expr
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("rhs_expr is None"))?;
-        lhs.accept(state, self)?;
-        rhs.accept(state, self)?;
+        lhs.accept(self)?;
+        rhs.accept(self)?;
         Ok(())
     }
 
-    fn visit_factor(&self, _state: &State, ast: &Factor) -> Result<()> {
+    fn visit_factor(&self, ast: &Factor) -> Result<()> {
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&ast.text) {
             self.error(ErrorType::Not, ast.text.index(..));
         }
         Ok(())
     }
 
-    #[inline(never)]
-    fn visit_with_decl(&self, _state: &State, ast: &WithDecl) -> Result<()> {
+    fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
         for i in ast.vars.iter() {
             if self.scope.borrow().contains(i) {
                 self.error(ErrorType::Twice, i.index(..));
@@ -73,20 +75,19 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit_index(&self, state: &State, ast: &ExprIndex) -> Result<()> {
-        let exprs = &state.exprs;
-       // let e = &tmp[ast.0];
-        let e = exprs.get(*ast).unwrap();
-        let e = e.borrow();
-        e.accept(state, self)
+    fn visit_index(&self, ast: &Rc<Expr>) -> Result<()> {
+        match ast.as_ref() {
+            Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
+            Expr::Factor(factor) => self.visit_factor(factor),
+        }
     }
 
-    fn visit(&self, state: &State, ast: &Ast) -> Result<()> {
+    fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
-            Ast::BinaryOp(bin_op) => self.visit_binary_op(state, bin_op),
-            Ast::Factor(factor) => self.visit_factor(state, factor),
-            Ast::WithDecl(with_decl) => self.visit_with_decl(state, with_decl),
-            Ast::Index(index) => self.visit_index(state, index),
+            Ast::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
+            Ast::Factor(factor) => self.visit_factor(factor),
+            Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
+            Ast::Index(index) => self.visit_index(index),
         }
     }
 }

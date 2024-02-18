@@ -1,6 +1,8 @@
-use std::{cell::{Cell, RefCell}, collections::HashMap};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+};
 
-use enum_dispatch::enum_dispatch;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
@@ -11,20 +13,12 @@ use inkwell::{
 use crate::*;
 use anyhow::Result;
 
-#[derive(Debug)]
-#[enum_dispatch]
-pub enum AstVisitor<'a> {
-    DeclCheck(DeclCheck),
-    ToIRVisitor(ToIRVisitor<'a>),
-}
-
-#[enum_dispatch(AstVisitor)]
 pub trait AstVisitorTrait<'a> {
-    fn visit_binary_op(&self, exprs: &State, ast: &BinaryOp) -> Result<()>;
-    fn visit_factor(&self, exprs: &State, ast: &Factor) -> Result<()>;
-    fn visit_with_decl(&self, exprs: &State, ast: &WithDecl) -> Result<()>;
-    fn visit_index(&self, exprs: &State, ast: &ExprIndex) -> Result<()>;
-    fn visit(&self, exprs: &State, ast: &Ast) -> Result<()>;
+    fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()>;
+    fn visit_factor(&self, ast: &Factor) -> Result<()>;
+    fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
+    fn visit_index(&self, ast: &Rc<Expr>) -> Result<()>;
+    fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -60,7 +54,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             name_map: Default::default(),
         }
     }
-    pub fn run(&mut self, state: &State, tree: &mut Ast) -> Result<()> {
+    pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
@@ -70,7 +64,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let entry = self.context.append_basic_block(main_fn, "entry");
         self.builder.position_at_end(entry);
 
-        tree.accept(state, self)?;
+        tree.accept(self)?;
 
         let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
         let calc_write_fn =
@@ -86,16 +80,18 @@ impl<'ctx> ToIRVisitor<'ctx> {
 }
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
-    fn visit_binary_op(&self, state: &State, bin_op: &BinaryOp) -> Result<()> {
+    fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let lhs = bin_op
             .lhs_expr
+            .as_ref()
             .ok_or(anyhow::anyhow!("lhs does not exist"))?;
         let rhs = bin_op
             .rhs_expr
+            .as_ref()
             .ok_or(anyhow::anyhow!("rhs does not exist"))?;
-        lhs.accept(state, self)?;
+        lhs.accept(self)?;
         let left = self.v.get();
-        rhs.accept(state, self)?;
+        rhs.accept(self)?;
         let right = self.v.get();
 
         let op = match bin_op.op {
@@ -116,7 +112,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit_factor(&self, _state: &State, factor: &Factor) -> Result<()> {
+    fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
                 let val = factor.text.iter().collect::<String>();
@@ -136,7 +132,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit_with_decl(&self, state: &State, with_decl: &WithDecl) -> Result<()> {
+    fn visit_with_decl(&self, with_decl: &WithDecl) -> Result<()> {
         let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
         let read_fn = self
             .module
@@ -168,24 +164,25 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         }
         let expr_index = with_decl
             .expr_index
+            .as_ref()
             .ok_or(anyhow::anyhow!("expr does not exist"))?;
-        expr_index.accept(state, self)?;
+        expr_index.accept(self)?;
         Ok(())
     }
 
-    fn visit_index(&self, state: &State, index: &ExprIndex) -> Result<()> {
-        let exprs = &state.exprs;
-        let e = exprs.get(*index).unwrap();
-        let e = e.borrow();
-        e.accept(state, self)
+    fn visit_index(&self, index: &Rc<Expr>) -> Result<()> {
+        match index.as_ref() {
+            Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
+            Expr::Factor(factor) => self.visit_factor(factor),
+        }
     }
 
-    fn visit(&self, state: &State, ast: &Ast) -> Result<()> {
+    fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
-            Ast::BinaryOp(bin_op) => self.visit_binary_op(state, bin_op),
-            Ast::Factor(factor) => self.visit_factor(state, factor),
-            Ast::WithDecl(with_decl) => self.visit_with_decl(state, with_decl),
-            Ast::Index(index) => self.visit_index(state, index),
+            Ast::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
+            Ast::Factor(factor) => self.visit_factor(factor),
+            Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
+            Ast::Index(index) => self.visit_index(index),
         }
     }
 }

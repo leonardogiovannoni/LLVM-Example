@@ -3,8 +3,7 @@ use crate::*;
 use anyhow::Result;
 use enum_dispatch::enum_dispatch;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ExprIndex(pub usize);
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
@@ -16,13 +15,13 @@ pub enum Operator {
 
 #[derive(Debug)]
 pub struct BinaryOp {
-    pub lhs_expr: Option<ExprIndex>,
-    pub rhs_expr: Option<ExprIndex>,
+    pub lhs_expr: Option<Rc<Expr>>,
+    pub rhs_expr: Option<Rc<Expr>>,
     pub op: Operator,
 }
 
 impl BinaryOp {
-    pub fn new(lhs_expr: Option<ExprIndex>, rhs_expr: Option<ExprIndex>, op: Operator) -> BinaryOp {
+    pub fn new(lhs_expr: Option<Rc<Expr>>, rhs_expr: Option<Rc<Expr>>, op: Operator) -> BinaryOp {
         BinaryOp {
             lhs_expr,
             rhs_expr,
@@ -53,14 +52,14 @@ impl Factor {
 pub struct WithDecl {
     pub vars: Vec<RefSlice<char>>,
     pub text: RefSlice<char>,
-    pub expr_index: Option<ExprIndex>,
+    pub expr_index: Option<Rc<Expr>>,
 }
 
 impl WithDecl {
     pub fn new(
         vars: Vec<RefSlice<char>>,
         text: RefSlice<char>,
-        expr_index: Option<ExprIndex>,
+        expr_index: Option<Rc<Expr>>,
     ) -> WithDecl {
         WithDecl {
             vars,
@@ -69,8 +68,8 @@ impl WithDecl {
         }
     }
 
-    pub fn get_expr(&self) -> Option<ExprIndex> {
-        self.expr_index
+    pub fn get_expr(&self) -> Option<Rc<Expr>> {
+        self.expr_index.clone()
     }
 
     pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
@@ -84,34 +83,34 @@ pub enum Ast {
     BinaryOp(BinaryOp),
     Factor(Factor),
     WithDecl(WithDecl),
-    Index(ExprIndex),
+    Index(Rc<Expr>),
 }
 
 #[enum_dispatch(Ast)]
 pub trait AstTrait {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()>;
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()>;
 }
 
 impl AstTrait for BinaryOp {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_binary_op(exprs, self)
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit_binary_op(self)
     }
 }
 
 impl AstTrait for Factor {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_factor(exprs, self)
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit_factor(self)
     }
 }
 
 impl AstTrait for WithDecl {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_with_decl(exprs, self)
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit_with_decl(self)
     }
 }
 
-impl AstTrait for ExprIndex {
-    fn accept<'a>(&self, exprs: &State, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_index(exprs, self)
+impl AstTrait for Rc<Expr> {
+    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
+        v.visit_index(self)
     }
 }
