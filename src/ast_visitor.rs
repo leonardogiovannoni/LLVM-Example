@@ -4,7 +4,7 @@ use enum_dispatch::enum_dispatch;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
-    values::BasicValueEnum,
+    values::{AnyValue, BasicValueEnum},
     AddressSpace,
 };
 
@@ -87,8 +87,12 @@ impl<'ctx> ToIRVisitor<'ctx> {
 
 impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn visit_binary_op(&self, state: &State, bin_op: &BinaryOp) -> Result<()> {
-        let lhs = bin_op.lhs_expr.unwrap();
-        let rhs = bin_op.rhs_expr.unwrap();
+        let lhs = bin_op
+            .lhs_expr
+            .ok_or(anyhow::anyhow!("lhs does not exist"))?;
+        let rhs = bin_op
+            .rhs_expr
+            .ok_or(anyhow::anyhow!("rhs does not exist"))?;
         lhs.accept(state, self)?;
         let left = *self.v.borrow();
         rhs.accept(state, self)?;
@@ -155,11 +159,17 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             let call =
                 self.builder
                     .build_call(read_fn, &[global_str.as_pointer_value().into()], "")?;
-            self.name_map
-                .borrow_mut()
-                .insert(var, call.try_as_basic_value().left().unwrap());
+
+            let left = call
+                .try_as_basic_value()
+                .left()
+                .ok_or(anyhow::anyhow!("not a basic value"))?;
+            self.name_map.borrow_mut().insert(var, left);
         }
-        with_decl.expr_index.unwrap().accept(state, self)?;
+        let expr_index = with_decl
+            .expr_index
+            .ok_or(anyhow::anyhow!("expr does not exist"))?;
+        expr_index.accept(state, self)?;
         Ok(())
     }
 

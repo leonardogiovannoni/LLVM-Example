@@ -14,18 +14,19 @@ use crate::expr::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
+use anyhow::bail;
+use anyhow::Result;
 use inkwell::context::Context;
 use refslice::RefSlice;
 use std::cell::RefCell;
 use std::rc::Rc;
-
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic(&self, exprs: &State, ast: &Ast) -> bool {
+    pub fn semantic(&self, exprs: &State, ast: &Ast) -> Result<bool> {
         let check = DeclCheck::new();
-        ast.accept(exprs, &check).unwrap();
-        check.has_error.get()
+        ast.accept(exprs, &check)?;
+        Ok(check.has_error.get())
     }
 }
 
@@ -38,13 +39,14 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, exprs: &State, mut ast: Ast) {
+    pub fn compile(&self, exprs: &State, mut ast: Ast) -> Result<()> {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
-        to_ir.run(exprs, &mut ast).unwrap();
+        to_ir.run(exprs, &mut ast)?;
         let s = module.print_to_string().to_string();
         println!("{}", s);
+        Ok(())
     }
 }
 
@@ -53,7 +55,7 @@ pub struct State {
     pub exprs: RefCell<Vec<Expr>>,
 }
 
-fn main() {
+fn routine() -> Result<()> {
     let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<Vec<_>>();
     let input = Rc::from(input);
@@ -65,19 +67,24 @@ fn main() {
     };
     let ast = parser.parse(&state);
     if parser.has_error {
-        return;
+        bail!("parse error");
     }
     let Some(ast) = ast else {
-        return;
+        bail!("parse error");
     };
     debug_ast(&ast, &state);
     let semantic = Sema;
 
-    if semantic.semantic(&state, &ast) {
-        println!("semantic error");
-        return;
+    if semantic.semantic(&state, &ast)? {
+        bail!("semantic error");
     }
     let ctx = Context::create();
     let codegen = CodeGen::new(&ctx);
-    codegen.compile(&state, ast);
+    codegen.compile(&state, ast)
+}
+
+fn main() {
+    if let Err(e) = routine() {
+        eprintln!("error: {:?}", e);
+    }
 }

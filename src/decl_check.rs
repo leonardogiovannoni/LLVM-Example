@@ -43,8 +43,12 @@ impl DeclCheck {
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_binary_op(&self, state: &State, ast: &BinaryOp) -> Result<()> {
-        let lhs = ast.lhs_expr.unwrap();
-        let rhs = ast.rhs_expr.unwrap();
+        let lhs = ast
+            .lhs_expr
+            .ok_or_else(|| anyhow::anyhow!("lhs_expr is None"))?;
+        let rhs = ast
+            .rhs_expr
+            .ok_or_else(|| anyhow::anyhow!("rhs_expr is None"))?;
         lhs.accept(state, self)?;
         rhs.accept(state, self)?;
         Ok(())
@@ -71,7 +75,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_index(&self, state: &State, ast: &ExprIndex) -> Result<()> {
         let exprs = &state.exprs;
         let tmp = exprs.borrow();
-        let e = tmp.get(ast.0).unwrap();
+        let e = &tmp[ast.0];
         e.accept(state, self)
     }
 
