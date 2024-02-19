@@ -5,13 +5,13 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use refslice::RefSlice;
+use refslice::refstr::RefStr;
 
 use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
 
 #[derive(Debug)]
 pub struct DeclCheck {
-    pub scope: RefCell<HashSet<RefSlice<char>>>,
+    pub scope: RefCell<HashSet<RefStr>>,
     pub has_error: Cell<bool>,
 }
 
@@ -42,7 +42,7 @@ impl DeclCheck {
         Ok(())
     }
 
-    pub fn error(&self, err: ErrorType, s: RefSlice<char>) {
+    pub fn error(&self, err: ErrorType, s: RefStr) {
         let tmp = if err == ErrorType::Twice {
             "twice"
         } else {

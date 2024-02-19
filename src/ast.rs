@@ -36,33 +36,29 @@ pub enum ValueKind {
 #[derive(Debug)]
 pub struct Factor {
     pub kind: ValueKind,
-    pub text: RefSlice<char>,
+    pub text: RefStr,
 }
 
 impl Factor {
-    pub fn new(v: ValueKind, text: RefSlice<char>) -> Factor {
+    pub fn new(v: ValueKind, text: RefStr) -> Factor {
         Factor { kind: v, text }
     }
 }
 
 #[derive(Debug)]
 pub struct WithDecl {
-    pub vars: Vec<RefSlice<char>>,
-    pub text: RefSlice<char>,
+    pub vars: Vec<RefStr>,
+    pub text: RefStr,
     pub expr: Rc<Expr>,
 }
 
 impl WithDecl {
-    pub fn new(vars: Vec<RefSlice<char>>, text: RefSlice<char>, expr: Rc<Expr>) -> Self {
-        WithDecl {
-            vars,
-            text,
-            expr,
-        }
+    pub fn new(vars: Vec<RefStr>, text: RefStr, expr: Rc<Expr>) -> Self {
+        WithDecl { vars, text, expr }
     }
 
-    pub fn vars_iter(&self) -> impl Iterator<Item = &[char]> {
-        self.vars.iter().map(|v| v.as_ref())
+    pub fn vars_iter(&self) -> impl Iterator<Item = &str> {
+        self.vars.iter().map(|v| v.as_str())
     }
 }
 

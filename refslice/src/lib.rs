@@ -1,3 +1,4 @@
+pub mod refstr;
 use std::{
     fmt::Debug, ops::{Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}, rc::Rc
 };
@@ -386,3 +387,6 @@ mod tests {
         assert_eq!(slice.get(..0), Some(RefSlice::new(Rc::new([]))));
     }
 }
+
+
+

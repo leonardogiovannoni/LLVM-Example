@@ -15,7 +15,8 @@ use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
 use inkwell::context::Context;
-use refslice::RefSlice;
+use refslice::refstr::RefStr;
+
 use std::rc::Rc;
 pub struct Sema;
 
@@ -49,9 +50,10 @@ impl<'a> CodeGen<'a> {
 
 fn run() -> Result<()> {
     let input = std::env::args().nth(1).expect("no input");
-    let input = input.chars().collect::<Vec<_>>();
-    let input = RefSlice::from(Rc::from(input));
-    let lexer = Lexer::new(RefSlice::clone(&input));
+    let input = input.chars().collect::<String>().into_boxed_str();
+    let input = Rc::from(input);
+    let input = RefStr::from(input);
+    let lexer = Lexer::new(RefStr::clone(&input));
     let mut parser = Parser::new(lexer, input.index(..));
     let ast = parser.parse();
     if parser.has_error {

@@ -47,7 +47,7 @@ impl<'a> ToIRVisitor<'a> {
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = factor.text.iter().collect::<String>();
+                let val = factor.text.as_str().chars().collect::<String>();
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
                 } else {
@@ -55,7 +55,7 @@ impl<'a> ToIRVisitor<'a> {
                 }
             }
             _ => {
-                let val = factor.text.iter().collect::<String>();
+                let val = factor.text.as_str().chars().collect::<String>();
                 let intval = val.parse().expect("Invalid integer");
                 let v = self.int32_ty.const_int(intval, true).into();
                 self.v.set(v);
@@ -132,7 +132,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .add_function("calc_read", read_ftype, Some(Linkage::External));
 
         for var in with_decl.vars_iter() {
-            let var = var.iter().collect::<String>();
+            let var = var.to_owned();
             let str_val = self.context.const_string(var.as_bytes(), true);
 
             let global_str = self.module.add_global(

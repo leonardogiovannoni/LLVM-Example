@@ -1,4 +1,4 @@
-use refslice::RefSlice;
+use refslice::refstr::RefStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
@@ -21,11 +21,11 @@ pub enum TokenKind {
 #[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub text: RefSlice<char>,
+    pub text: RefStr,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, text: RefSlice<char>) -> Self {
+    pub fn new(kind: TokenKind, text: RefStr) -> Self {
         Token { kind, text }
     }
 

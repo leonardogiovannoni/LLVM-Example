@@ -26,7 +26,7 @@ impl<'a> DebugAstVisitor<'a> {
     }
 
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
-        let val = factor.text.iter().collect::<String>();
+        let val = factor.text.as_str().chars().collect::<String>();
         let kind = format!("{:?}", factor.kind);
         println!("Factor(kind: {}, val: {})", kind, val);
         Ok(())
@@ -47,7 +47,7 @@ impl<'a> DebugAstVisitor<'a> {
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
             Expr::Factor(factor) => {
-                let val = factor.text.iter().collect::<String>();
+                let val = factor.text.as_str().chars().collect::<String>();
                 let kind = format!("{:?}", factor.kind);
                 format!("Factor(kind: {}, val: {})", kind, val)
             }
@@ -59,7 +59,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     fn visit_with_decl(&self, with_decl: &WithDecl) -> Result<()> {
         let vars = with_decl
             .vars_iter()
-            .map(|v| v.iter().collect::<String>())
+            .map(|v| v.to_owned())
             .collect::<Vec<_>>();
 
         let expr = self.format_expr(with_decl.expr.as_ref());

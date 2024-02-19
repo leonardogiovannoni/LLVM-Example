@@ -4,14 +4,14 @@ pub struct Parser {
     pub lexer: Lexer,
     pub token: Token,
     pub has_error: bool,
-    pub text: RefSlice<char>,
+    pub text: RefStr,
 }
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: RefSlice<char>) -> Self {
+    pub fn new(lexer: Lexer, buf: RefStr) -> Self {
         let mut parser = Self {
             lexer,
-            token: Token::new(TokenKind::Unknown, RefSlice::from([])),
+            token: Token::new(TokenKind::Unknown, RefStr::new("")),
             has_error: false,
             text: buf,
         };
@@ -45,7 +45,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_calc_begin(&mut self) -> Option<Vec<RefSlice<char>>> {
+    pub fn parse_calc_begin(&mut self) -> Option<Vec<RefStr>> {
         let mut vars = Vec::new();
         if self.token.is(TokenKind::KWWith) {
             self.advance();

@@ -1,11 +1,11 @@
 use crate::*;
+use refslice::refstr::RefStr;
 
 pub struct Lexer {
-    pub text: RefSlice<char>,
+    pub text: RefStr,
 }
-
 impl Lexer {
-    pub fn new(input: RefSlice<char>) -> Self {
+    pub fn new(input: RefStr) -> Self {
         Lexer { text: input }
     }
 
@@ -16,9 +16,14 @@ impl Lexer {
     }
 
     pub fn next(&mut self, token: &mut Token) {
-        let i = self.text.iter().take_while(|x| x.is_whitespace()).count();
+        let i = self
+            .text
+            .iter()
+            .take_while(|x| x.is_whitespace())
+            .map(|x| x.len_utf8())
+            .sum();
         self.text = self.text.index(i..);
-        let first = self.text.get(0);
+        let first = self.text.first();
         let Some(c) = first else {
             token.kind = TokenKind::Eoi;
             token.text = self.text.index(..0);
@@ -26,10 +31,15 @@ impl Lexer {
         };
         match c {
             x if x.is_alphabetic() => {
-                let i = self.text.iter().take_while(|x| x.is_alphabetic()).count();
+                let i = self
+                    .text
+                    .iter()
+                    .take_while(|x| x.is_alphabetic())
+                    .map(|x| x.len_utf8())
+                    .sum();
                 let name = self.text.index(..i);
-                let kind = match name.as_ref() {
-                    ['w', 'i', 't', 'h'] => TokenKind::KWWith,
+                let kind = match name.as_str() {
+                    "with" => TokenKind::KWWith,
                     _ => TokenKind::Ident,
                 };
                 self.form_token(token, i, kind)
