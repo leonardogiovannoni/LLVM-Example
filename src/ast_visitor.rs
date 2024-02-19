@@ -183,7 +183,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Index(index) => self.visit_index(index),
+            Ast::Expr(index) => self.visit_index(index),
         }
     }
 }

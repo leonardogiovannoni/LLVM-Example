@@ -79,7 +79,7 @@ pub enum Expr {
 #[derive(Debug)]
 pub enum Ast {
     WithDecl(WithDecl),
-    Index(Rc<Expr>),
+    Expr(Rc<Expr>),
 }
 
 pub trait AstTrait {
@@ -90,7 +90,7 @@ impl AstTrait for Ast {
     fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         match self {
             Ast::WithDecl(ast) => ast.accept(v),
-            Ast::Index(ast) => ast.accept(v),
+            Ast::Expr(ast) => ast.accept(v),
         }
     }
 }
