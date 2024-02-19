@@ -78,8 +78,6 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub enum Ast {
-    BinaryOp(BinaryOp),
-    Factor(Factor),
     WithDecl(WithDecl),
     Index(Rc<Expr>),
 }
@@ -91,8 +89,6 @@ pub trait AstTrait {
 impl AstTrait for Ast {
     fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         match self {
-            Ast::BinaryOp(ast) => ast.accept(v),
-            Ast::Factor(ast) => ast.accept(v),
             Ast::WithDecl(ast) => ast.accept(v),
             Ast::Index(ast) => ast.accept(v),
         }

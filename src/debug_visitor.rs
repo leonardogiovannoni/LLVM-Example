@@ -79,8 +79,6 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
 
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
-            Ast::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
-            Ast::Factor(factor) => self.visit_factor(factor),
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
             Ast::Index(index) => self.visit_index(index),
         }
