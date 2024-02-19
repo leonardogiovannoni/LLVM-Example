@@ -62,7 +62,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
             .map(|v| v.iter().collect::<String>())
             .collect::<Vec<_>>();
 
-        let expr = self.format_expr(with_decl.expr_index.as_ref());
+        let expr = self.format_expr(with_decl.expr.as_ref());
         let vars = format!("{:?}", vars);
         println!("WithDecl(vars: {}, expr: {})", vars, expr);
         Ok(())

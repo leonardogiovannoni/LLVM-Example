@@ -49,15 +49,15 @@ impl Factor {
 pub struct WithDecl {
     pub vars: Vec<RefSlice<char>>,
     pub text: RefSlice<char>,
-    pub expr_index: Rc<Expr>,
+    pub expr: Rc<Expr>,
 }
 
 impl WithDecl {
-    pub fn new(vars: Vec<RefSlice<char>>, text: RefSlice<char>, expr_index: Rc<Expr>) -> Self {
+    pub fn new(vars: Vec<RefSlice<char>>, text: RefSlice<char>, expr: Rc<Expr>) -> Self {
         WithDecl {
             vars,
             text,
-            expr_index,
+            expr,
         }
     }
 
