@@ -49,10 +49,9 @@ impl<'a> CodeGen<'a> {
 }
 
 fn run() -> Result<()> {
-    let input = std::env::args().nth(1).expect("no input");
+    let input = std::env::args().skip(1).next().expect("no input");
     let input = input.chars().collect::<String>().into_boxed_str();
-    let input = Rc::from(input);
-    let input = RefStr::from(input);
+    let input = RefStr::from(Rc::from(input));
     let lexer = Lexer::new(input.index(..));
     let mut parser = Parser::new(lexer, input.index(..));
     let ast = parser.parse();
