@@ -53,11 +53,7 @@ pub struct WithDecl {
 }
 
 impl WithDecl {
-    pub fn new(
-        vars: Vec<RefSlice<char>>,
-        text: RefSlice<char>,
-        expr_index: Rc<Expr>,
-    ) -> Self {
+    pub fn new(vars: Vec<RefSlice<char>>, text: RefSlice<char>, expr_index: Rc<Expr>) -> Self {
         WithDecl {
             vars,
             text,

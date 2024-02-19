@@ -13,7 +13,8 @@ impl<'a> DebugAstVisitor<'a> {
 
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let get_pretty_name = |idx: &Rc<Expr>| {
-            Some(idx).map(|idx| self.format_expr(idx))
+            Some(idx)
+                .map(|idx| self.format_expr(idx))
                 .map(|expr| format!("Some({})", expr))
                 .unwrap_or_else(|| "None".to_string())
         };
@@ -35,7 +36,8 @@ impl<'a> DebugAstVisitor<'a> {
         match expr {
             Expr::BinaryOp(bin_op) => {
                 let resolve_fn = |idx: &Rc<Expr>| {
-                    Some(idx).map(|idx| self.format_expr(idx))
+                    Some(idx)
+                        .map(|idx| self.format_expr(idx))
                         .map(|expr| format!("Some({})", expr))
                         .unwrap_or_else(|| "None".to_string())
                 };

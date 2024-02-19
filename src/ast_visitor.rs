@@ -155,8 +155,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
             self.name_map.borrow_mut().insert(var, left);
         }
-        with_decl
-            .expr_index.accept(self)?;
+        with_decl.expr_index.accept(self)?;
         Ok(())
     }
 
