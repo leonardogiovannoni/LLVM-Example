@@ -53,7 +53,7 @@ fn run() -> Result<()> {
     let input = input.chars().collect::<String>().into_boxed_str();
     let input = Rc::from(input);
     let input = RefStr::from(input);
-    let lexer = Lexer::new(RefStr::clone(&input));
+    let lexer = Lexer::new(input.index(..));
     let mut parser = Parser::new(lexer, input.index(..));
     let ast = parser.parse();
     if parser.has_error {
