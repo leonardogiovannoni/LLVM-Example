@@ -7,9 +7,7 @@ use std::{
 use anyhow::{bail, Result};
 use refslice::RefSlice;
 
-use crate::{
-    Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl,
-};
+use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
 
 #[derive(Debug)]
 pub struct DeclCheck {
@@ -31,18 +29,6 @@ impl DeclCheck {
         }
     }
 
-    pub fn error(&self, err: ErrorType, s: RefSlice<char>) {
-        let tmp = if err == ErrorType::Twice {
-            "twice"
-        } else {
-            "not"
-        };
-        println!("Variable {:?} is {} declared", s, tmp);
-        self.has_error.set(true);
-    }
-}
-
-impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()> {
         let lhs = ast
             .lhs_expr
@@ -64,6 +50,18 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
+    pub fn error(&self, err: ErrorType, s: RefSlice<char>) {
+        let tmp = if err == ErrorType::Twice {
+            "twice"
+        } else {
+            "not"
+        };
+        println!("Variable {:?} is {} declared", s, tmp);
+        self.has_error.set(true);
+    }
+}
+
+impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
         for i in ast.vars.iter() {
             if self.scope.borrow().contains(i) {

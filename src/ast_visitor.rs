@@ -14,73 +14,14 @@ use crate::*;
 use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
-    fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()>;
-    fn visit_factor(&self, ast: &Factor) -> Result<()>;
+    //fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()>;
+    //fn visit_factor(&self, ast: &Factor) -> Result<()>;
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
     fn visit_index(&self, ast: &Rc<Expr>) -> Result<()>;
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
-#[derive(Debug)]
-pub struct ToIRVisitor<'ctx> {
-    context: &'ctx Context,
-    module: Rc<Module<'ctx>>,
-    builder: Builder<'ctx>,
-    void_ty: inkwell::types::VoidType<'ctx>,
-    int32_ty: inkwell::types::IntType<'ctx>,
-    ptr_ty: inkwell::types::PointerType<'ctx>,
-    int32_zero: inkwell::values::IntValue<'ctx>,
-    v: Cell<BasicValueEnum<'ctx>>,
-    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
-}
-
-impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
-        let builder = context.create_builder();
-        let void_ty = context.void_type();
-        let int32_ty = context.i32_type();
-        let ptr_ty = int32_ty.ptr_type(AddressSpace::default());
-        let int32_zero = int32_ty.const_int(0, true);
-
-        Self {
-            context,
-            module,
-            builder,
-            void_ty,
-            int32_ty,
-            ptr_ty,
-            int32_zero,
-            v: Cell::new(int32_zero.into()),
-            name_map: Default::default(),
-        }
-    }
-    
-    pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
-        let main_fn_type = self
-            .int32_ty
-            .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
-        let main_fn = self
-            .module
-            .add_function("main", main_fn_type, Some(Linkage::External));
-        let entry = self.context.append_basic_block(main_fn, "entry");
-        self.builder.position_at_end(entry);
-
-        tree.accept(self)?;
-
-        let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
-        let calc_write_fn =
-            self.module
-                .add_function("calc_write", calc_write_fn_type, Some(Linkage::External));
-        let v = self.v.get();
-        self.builder
-            .build_call(calc_write_fn, &[v.into()], "call_calc_write")?;
-
-        self.builder.build_return(Some(&self.int32_zero))?;
-        Ok(())
-    }
-}
-
-impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
+impl<'a> ToIRVisitor<'a> {
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let lhs = bin_op
             .lhs_expr
@@ -132,7 +73,68 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         }
         Ok(())
     }
+}
 
+#[derive(Debug)]
+pub struct ToIRVisitor<'ctx> {
+    context: &'ctx Context,
+    module: Rc<Module<'ctx>>,
+    builder: Builder<'ctx>,
+    void_ty: inkwell::types::VoidType<'ctx>,
+    int32_ty: inkwell::types::IntType<'ctx>,
+    ptr_ty: inkwell::types::PointerType<'ctx>,
+    int32_zero: inkwell::values::IntValue<'ctx>,
+    v: Cell<BasicValueEnum<'ctx>>,
+    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
+}
+
+impl<'ctx> ToIRVisitor<'ctx> {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
+        let builder = context.create_builder();
+        let void_ty = context.void_type();
+        let int32_ty = context.i32_type();
+        let ptr_ty = int32_ty.ptr_type(AddressSpace::default());
+        let int32_zero = int32_ty.const_int(0, true);
+
+        Self {
+            context,
+            module,
+            builder,
+            void_ty,
+            int32_ty,
+            ptr_ty,
+            int32_zero,
+            v: Cell::new(int32_zero.into()),
+            name_map: Default::default(),
+        }
+    }
+
+    pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
+        let main_fn_type = self
+            .int32_ty
+            .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
+        let main_fn = self
+            .module
+            .add_function("main", main_fn_type, Some(Linkage::External));
+        let entry = self.context.append_basic_block(main_fn, "entry");
+        self.builder.position_at_end(entry);
+
+        tree.accept(self)?;
+
+        let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
+        let calc_write_fn =
+            self.module
+                .add_function("calc_write", calc_write_fn_type, Some(Linkage::External));
+        let v = self.v.get();
+        self.builder
+            .build_call(calc_write_fn, &[v.into()], "call_calc_write")?;
+
+        self.builder.build_return(Some(&self.int32_zero))?;
+        Ok(())
+    }
+}
+
+impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn visit_with_decl(&self, with_decl: &WithDecl) -> Result<()> {
         let read_ftype = self.int32_ty.fn_type(&[self.ptr_ty.into()], false);
         let read_fn = self

@@ -95,18 +95,6 @@ impl AstTrait for Ast {
     }
 }
 
-impl AstTrait for BinaryOp {
-    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_binary_op(self)
-    }
-}
-
-impl AstTrait for Factor {
-    fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_factor(self)
-    }
-}
-
 impl AstTrait for WithDecl {
     fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
         v.visit_with_decl(self)
