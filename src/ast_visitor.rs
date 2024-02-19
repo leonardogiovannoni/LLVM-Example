@@ -14,8 +14,6 @@ use crate::*;
 use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
-    //fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()>;
-    //fn visit_factor(&self, ast: &Factor) -> Result<()>;
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
     fn visit_index(&self, ast: &Rc<Expr>) -> Result<()>;
     fn visit(&self, ast: &Ast) -> Result<()>;
@@ -23,17 +21,9 @@ pub trait AstVisitorTrait<'a> {
 
 impl<'a> ToIRVisitor<'a> {
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
-        let lhs = bin_op
-            .lhs_expr
-            .as_ref()
-            .ok_or(anyhow::anyhow!("lhs does not exist"))?;
-        let rhs = bin_op
-            .rhs_expr
-            .as_ref()
-            .ok_or(anyhow::anyhow!("rhs does not exist"))?;
-        lhs.accept(self)?;
+        bin_op.lhs_expr.accept(self)?;
         let left = self.v.get();
-        rhs.accept(self)?;
+        bin_op.rhs_expr.accept(self)?;
         let right = self.v.get();
 
         let op = match bin_op.op {
@@ -165,11 +155,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
             self.name_map.borrow_mut().insert(var, left);
         }
-        let expr_index = with_decl
-            .expr_index
-            .as_ref()
-            .ok_or(anyhow::anyhow!("expr does not exist"))?;
-        expr_index.accept(self)?;
+        with_decl
+            .expr_index.accept(self)?;
         Ok(())
     }
 

@@ -82,7 +82,7 @@ impl Parser {
             Some(Ast::Expr(e))
         } else {
             let buf = self.text.index(..);
-            Some(Ast::WithDecl(WithDecl::new(vars, buf, Some(e))))
+            Some(Ast::WithDecl(WithDecl::new(vars, buf, e)))
         }
     }
 
@@ -96,7 +96,7 @@ impl Parser {
     }
 
     pub fn parse_expr(&mut self) -> Option<Rc<Expr>> {
-        let mut left = self.parse_term();
+        let mut left = self.parse_term()?;
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
                 TokenKind::Plus => Operator::Plus,
@@ -104,28 +104,28 @@ impl Parser {
                 _ => unreachable!(),
             };
             self.advance();
-            let right = self.parse_term();
+            let right = self.parse_term()?;
             let binary_op = BinaryOp::new(left, right, op);
             let id = Rc::new(Expr::BinaryOp(binary_op));
-            left = Some(id);
+            left = id;
         }
-        left
+        Some(left)
     }
 
     pub fn parse_term(&mut self) -> Option<Rc<Expr>> {
-        let mut left = self.parse_factor();
+        let mut left = self.parse_factor()?;
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
                 TokenKind::Star => Operator::Mul,
                 _ => Operator::Div,
             };
             self.advance();
-            let right = self.parse_factor();
+            let right = self.parse_factor()?;
             let binary_op = BinaryOp::new(left, right, op);
             let binary_op = Rc::new(Expr::BinaryOp(binary_op));
-            left = Some(binary_op);
+            left = binary_op;
         }
-        left
+        Some(left)
     }
 
     pub fn parse_factor(&mut self) -> Option<Rc<Expr>> {

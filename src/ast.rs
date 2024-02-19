@@ -12,13 +12,13 @@ pub enum Operator {
 
 #[derive(Debug)]
 pub struct BinaryOp {
-    pub lhs_expr: Option<Rc<Expr>>,
-    pub rhs_expr: Option<Rc<Expr>>,
+    pub lhs_expr: Rc<Expr>,
+    pub rhs_expr: Rc<Expr>,
     pub op: Operator,
 }
 
 impl BinaryOp {
-    pub fn new(lhs_expr: Option<Rc<Expr>>, rhs_expr: Option<Rc<Expr>>, op: Operator) -> BinaryOp {
+    pub fn new(lhs_expr: Rc<Expr>, rhs_expr: Rc<Expr>, op: Operator) -> BinaryOp {
         BinaryOp {
             lhs_expr,
             rhs_expr,
@@ -49,14 +49,14 @@ impl Factor {
 pub struct WithDecl {
     pub vars: Vec<RefSlice<char>>,
     pub text: RefSlice<char>,
-    pub expr_index: Option<Rc<Expr>>,
+    pub expr_index: Rc<Expr>,
 }
 
 impl WithDecl {
     pub fn new(
         vars: Vec<RefSlice<char>>,
         text: RefSlice<char>,
-        expr_index: Option<Rc<Expr>>,
+        expr_index: Rc<Expr>,
     ) -> Self {
         WithDecl {
             vars,

@@ -12,13 +12,13 @@ impl<'a> DebugAstVisitor<'a> {
     }
 
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
-        let get_pretty_name = |idx: Option<&Rc<Expr>>| {
-            idx.map(|idx| self.format_expr(idx))
+        let get_pretty_name = |idx: &Rc<Expr>| {
+            Some(idx).map(|idx| self.format_expr(idx))
                 .map(|expr| format!("Some({})", expr))
                 .unwrap_or_else(|| "None".to_string())
         };
-        let lhs = get_pretty_name(bin_op.lhs_expr.as_ref());
-        let rhs = get_pretty_name(bin_op.rhs_expr.as_ref());
+        let lhs = get_pretty_name(&bin_op.lhs_expr);
+        let rhs = get_pretty_name(&bin_op.rhs_expr);
         let op = format!("{:?}", bin_op.op);
         println!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op);
         Ok(())
@@ -34,13 +34,13 @@ impl<'a> DebugAstVisitor<'a> {
     fn format_expr(&self, expr: &Expr) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
-                let resolve_fn = |idx: Option<&Rc<Expr>>| {
-                    idx.map(|idx| self.format_expr(idx))
+                let resolve_fn = |idx: &Rc<Expr>| {
+                    Some(idx).map(|idx| self.format_expr(idx))
                         .map(|expr| format!("Some({})", expr))
                         .unwrap_or_else(|| "None".to_string())
                 };
-                let lhs = resolve_fn(bin_op.lhs_expr.as_ref());
-                let rhs = resolve_fn(bin_op.rhs_expr.as_ref());
+                let lhs = resolve_fn(&bin_op.lhs_expr);
+                let rhs = resolve_fn(&bin_op.rhs_expr);
                 let op = format!("{:?}", bin_op.op);
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
@@ -59,13 +59,8 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
             .vars_iter()
             .map(|v| v.iter().collect::<String>())
             .collect::<Vec<_>>();
-        let expr = with_decl
-            .expr_index
-            .as_ref()
-            .map(|idx| self.format_expr(idx));
-        let expr = expr
-            .map(|expr| format!("Some({})", expr))
-            .unwrap_or_else(|| "None".to_string());
+
+        let expr = self.format_expr(with_decl.expr_index.as_ref());
         let vars = format!("{:?}", vars);
         println!("WithDecl(vars: {}, expr: {})", vars, expr);
         Ok(())

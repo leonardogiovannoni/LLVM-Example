@@ -30,16 +30,8 @@ impl DeclCheck {
     }
 
     fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()> {
-        let lhs = ast
-            .lhs_expr
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("lhs_expr is None"))?;
-        let rhs = ast
-            .rhs_expr
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("rhs_expr is None"))?;
-        lhs.accept(self)?;
-        rhs.accept(self)?;
+        ast.lhs_expr.accept(self)?;
+        ast.rhs_expr.accept(self)?;
         Ok(())
     }
 
