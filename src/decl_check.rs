@@ -7,7 +7,7 @@ use std::{
 use anyhow::{bail, Result};
 use refslice::refstr::RefStr;
 
-use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
+use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl, EXPR};
 
 #[derive(Debug)]
 pub struct DeclCheck {
@@ -65,8 +65,9 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit_index(&self, ast: &Rc<Expr>) -> Result<()> {
-        match ast.as_ref() {
+    fn visit_index(&self, ast: usize) -> Result<()> {
+        let expr = EXPR.get(ast).unwrap();
+        match &*expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
             Expr::Factor(factor) => self.visit_factor(factor),
         }
@@ -75,7 +76,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Expr(index) => self.visit_index(index),
+            Ast::Expr(index) => self.visit_index(*index),
         }
     }
 }

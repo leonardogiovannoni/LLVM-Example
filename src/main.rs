@@ -1,3 +1,4 @@
+#![feature(lazy_cell)]
 mod ast;
 mod ast_visitor;
 mod debug_visitor;
@@ -14,10 +15,16 @@ use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
+use crossbeam_skiplist::map::Entry;
+use crossbeam_skiplist::SkipMap;
 use inkwell::context::Context;
 use refslice::refstr::RefStr;
 
+use std::cell::Cell;
+use std::cell::LazyCell;
+use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::LazyLock;
 pub struct Sema;
 
 impl Sema {
@@ -27,6 +34,46 @@ impl Sema {
         Ok(check.has_error.get())
     }
 }
+
+
+
+pub struct Arena<T> {
+    data: SkipMap<usize, T>,
+    next_id: Cell<usize>,
+}
+
+impl<T: Send + 'static> Arena<T> {
+    pub fn new() -> Arena<T> {
+        Arena {
+            data: Default::default(),
+            next_id: Cell::new(1),
+        }
+    }
+
+    pub fn insert(&self, value: T) -> usize {
+        let id = self.next_id.get();
+        self.next_id.set(id + 1);
+        self.data.insert(id, value);
+        id
+    }
+
+    pub fn get(&self, id: usize) -> Option<impl std::ops::Deref<Target = T> + '_> {
+        struct Dummy<'a, K, V> (Entry<'a, K, V>);
+        impl<'a, K, V> Deref for Dummy<'a, K, V> {
+            type Target = V;
+            fn deref(&self) -> &V {
+                self.0.value()
+            }
+        }
+        self.data.get(&id).map(|entry| Dummy(entry))
+    }
+}
+
+unsafe impl<T> Send for Arena<T> {}
+unsafe impl<T> Sync for Arena<T> {}
+
+
+pub static EXPR: LazyLock<Arena<Expr>> = LazyLock::new(|| Arena::new());
 
 pub struct CodeGen<'a> {
     ctx: &'a Context,
@@ -51,7 +98,7 @@ impl<'a> CodeGen<'a> {
 fn run() -> Result<()> {
     let input = std::env::args().skip(1).next().expect("no input");
     let input = input.chars().collect::<String>().into_boxed_str();
-    let input = RefStr::from(Rc::from(input));
+    let input = RefStr::from(input.to_string());
     let lexer = Lexer::new(input.index(..));
     let mut parser = Parser::new(lexer, input.index(..));
     let ast = parser.parse();
@@ -61,7 +108,6 @@ fn run() -> Result<()> {
     let Some(ast) = ast else {
         bail!("parse error");
     };
-    debug_ast(&ast);
     let semantic = Sema;
 
     if semantic.semantic(&ast)? {

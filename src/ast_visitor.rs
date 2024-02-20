@@ -15,7 +15,7 @@ use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
-    fn visit_index(&self, ast: &Rc<Expr>) -> Result<()>;
+    fn visit_index(&self, ast: usize) -> Result<()>;
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
@@ -159,8 +159,9 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit_index(&self, index: &Rc<Expr>) -> Result<()> {
-        match index.as_ref() {
+    fn visit_index(&self, index: usize) -> Result<()> {
+        let expr = EXPR.get(index).unwrap();
+        match &*expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
             Expr::Factor(factor) => self.visit_factor(factor),
         }
@@ -169,7 +170,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Expr(index) => self.visit_index(index),
+            Ast::Expr(index) => self.visit_index(*index),
         }
     }
 }

@@ -12,13 +12,13 @@ pub enum Operator {
 
 #[derive(Debug)]
 pub struct BinaryOp {
-    pub lhs_expr: Rc<Expr>,
-    pub rhs_expr: Rc<Expr>,
+    pub lhs_expr: usize,
+    pub rhs_expr: usize,
     pub op: Operator,
 }
 
 impl BinaryOp {
-    pub fn new(lhs_expr: Rc<Expr>, rhs_expr: Rc<Expr>, op: Operator) -> BinaryOp {
+    pub fn new(lhs_expr: usize, rhs_expr: usize, op: Operator) -> BinaryOp {
         BinaryOp {
             lhs_expr,
             rhs_expr,
@@ -49,11 +49,11 @@ impl Factor {
 pub struct WithDecl {
     pub vars: Vec<RefStr>,
     pub text: RefStr,
-    pub expr: Rc<Expr>,
+    pub expr: usize,
 }
 
 impl WithDecl {
-    pub fn new(vars: Vec<RefStr>, text: RefStr, expr: Rc<Expr>) -> Self {
+    pub fn new(vars: Vec<RefStr>, text: RefStr, expr: usize) -> Self {
         WithDecl { vars, text, expr }
     }
 
@@ -71,7 +71,7 @@ pub enum Expr {
 #[derive(Debug)]
 pub enum Ast {
     WithDecl(WithDecl),
-    Expr(Rc<Expr>),
+    Expr(usize),
 }
 
 pub trait AstTrait {
@@ -93,8 +93,8 @@ impl AstTrait for WithDecl {
     }
 }
 
-impl AstTrait for Rc<Expr> {
+impl AstTrait for usize {
     fn accept<'a>(&self, v: &impl AstVisitorTrait<'a>) -> Result<()> {
-        v.visit_index(self)
+        v.visit_index(*self)
     }
 }

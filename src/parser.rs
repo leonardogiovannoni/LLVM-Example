@@ -95,7 +95,7 @@ impl Parser {
         })
     }
 
-    pub fn parse_expr(&mut self) -> Option<Rc<Expr>> {
+    pub fn parse_expr(&mut self) -> Option<usize> {
         let mut left = self.parse_term()?;
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
@@ -106,13 +106,14 @@ impl Parser {
             self.advance();
             let right = self.parse_term()?;
             let binary_op = BinaryOp::new(left, right, op);
-            let id = Rc::new(Expr::BinaryOp(binary_op));
+            let expr = Expr::BinaryOp(binary_op);
+            let id = EXPR.insert(expr);
             left = id;
         }
         Some(left)
     }
 
-    pub fn parse_term(&mut self) -> Option<Rc<Expr>> {
+    pub fn parse_term(&mut self) -> Option<usize> {
         let mut left = self.parse_factor()?;
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
@@ -122,24 +123,24 @@ impl Parser {
             self.advance();
             let right = self.parse_factor()?;
             let binary_op = BinaryOp::new(left, right, op);
-            let binary_op = Rc::new(Expr::BinaryOp(binary_op));
-            left = binary_op;
+            let expr = Expr::BinaryOp(binary_op);
+            left = EXPR.insert(expr);
         }
         Some(left)
     }
 
-    pub fn parse_factor(&mut self) -> Option<Rc<Expr>> {
+    pub fn parse_factor(&mut self) -> Option<usize> {
         let mut res = None;
         match self.token.kind {
             TokenKind::Ident => {
                 let text = self.token.text.index(..);
-                let id = Rc::new(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                let id = EXPR.insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
                 res = Some(id);
                 self.advance();
             }
             TokenKind::Number => {
                 let text = self.token.text.index(..);
-                let id = Rc::new(Expr::Factor(Factor::new(ValueKind::Number, text)));
+                let id = EXPR.insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
                 res = Some(id);
                 self.advance();
             }
