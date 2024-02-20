@@ -38,6 +38,12 @@ pub struct Arena<T> {
     next_id: Cell<usize>,
 }
 
+impl<T: Default> Default for Arena<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Arena<T> {
     pub fn new() -> Arena<T> {
         Arena {
@@ -55,7 +61,7 @@ impl<T> Arena<T> {
 
     #[inline(always)]
     pub fn get(&self, id: usize) -> Option<impl std::ops::Deref<Target = T> + '_> {
-        self.data.borrow().get(&id).map(|entry| entry.clone())
+        self.data.borrow().get(&id).cloned()
     }
 }
 
@@ -85,7 +91,7 @@ impl<'a> CodeGen<'a> {
 }
 
 fn run() -> Result<()> {
-    let input = std::env::args().skip(1).next().expect("no input");
+    let input = std::env::args().nth(1).expect("no input");
     let input = input.chars().collect::<String>().into_boxed_str();
     let input = RefStr::from(input.to_string());
     let lexer = Lexer::new(input.index(..));

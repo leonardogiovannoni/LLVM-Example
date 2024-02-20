@@ -16,7 +16,7 @@ impl<'a> DebugAstVisitor<'a> {
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let get_pretty_name = |idx: usize| {
             let expr = self.state.exprs.get(idx).unwrap();
-            self.format_expr(&*expr)
+            self.format_expr(&expr)
         };
         let lhs = get_pretty_name(bin_op.lhs_expr);
         let rhs = get_pretty_name(bin_op.rhs_expr);
@@ -35,8 +35,8 @@ impl<'a> DebugAstVisitor<'a> {
     fn format_expr(&self, expr: &Expr) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
-                let lhs = self.format_expr(&*self.state.exprs.get(bin_op.lhs_expr).unwrap());
-                let rhs = self.format_expr(&*self.state.exprs.get(bin_op.rhs_expr).unwrap());
+                let lhs = self.format_expr(&self.state.exprs.get(bin_op.lhs_expr).unwrap());
+                let rhs = self.format_expr(&self.state.exprs.get(bin_op.rhs_expr).unwrap());
                 let op = format!("{:?}", bin_op.op);
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
@@ -57,7 +57,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
             .collect::<Vec<_>>();
 
         let tmp = self.state.exprs.get(with_decl.expr).unwrap();
-        let expr = self.format_expr(&*tmp);
+        let expr = self.format_expr(&tmp);
         let vars = format!("{:?}", vars);
         println!("WithDecl(vars: {}, expr: {})", vars, expr);
         Ok(())
