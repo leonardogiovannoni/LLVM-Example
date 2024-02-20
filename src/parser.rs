@@ -5,15 +5,17 @@ pub struct Parser {
     pub token: Token,
     pub has_error: bool,
     pub text: RefStr,
+    pub state: Rc<State>,
 }
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: RefStr) -> Self {
+    pub fn new(lexer: Lexer, buf: RefStr, state: Rc<State>) -> Self {
         let mut parser = Self {
             lexer,
             token: Token::new(TokenKind::Unknown, RefStr::new("")),
             has_error: false,
             text: buf,
+            state,
         };
         parser.advance();
         parser
@@ -107,7 +109,7 @@ impl Parser {
             let right = self.parse_term()?;
             let binary_op = BinaryOp::new(left, right, op);
             let expr = Expr::BinaryOp(binary_op);
-            let id = EXPR.insert(expr);
+            let id = self.state.exprs.insert(expr);
             left = id;
         }
         Some(left)
@@ -124,7 +126,7 @@ impl Parser {
             let right = self.parse_factor()?;
             let binary_op = BinaryOp::new(left, right, op);
             let expr = Expr::BinaryOp(binary_op);
-            left = EXPR.insert(expr);
+            left = self.state.exprs.insert(expr);
         }
         Some(left)
     }
@@ -134,13 +136,19 @@ impl Parser {
         match self.token.kind {
             TokenKind::Ident => {
                 let text = self.token.text.index(..);
-                let id = EXPR.insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                let id = self
+                    .state
+                    .exprs
+                    .insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
                 res = Some(id);
                 self.advance();
             }
             TokenKind::Number => {
                 let text = self.token.text.index(..);
-                let id = EXPR.insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
+                let id = self
+                    .state
+                    .exprs
+                    .insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
                 res = Some(id);
                 self.advance();
             }

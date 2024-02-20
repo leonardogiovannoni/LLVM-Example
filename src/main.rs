@@ -15,34 +15,30 @@ use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
-use crossbeam_skiplist::map::Entry;
-use crossbeam_skiplist::SkipMap;
 use inkwell::context::Context;
 use refslice::refstr::RefStr;
 
 use std::cell::Cell;
-use std::cell::LazyCell;
-use std::ops::Deref;
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::LazyLock;
 pub struct Sema;
 
 impl Sema {
-    pub fn semantic(&self, ast: &Ast) -> Result<bool> {
-        let check = DeclCheck::new();
+    pub fn semantic(&self, ast: &Ast, state: Rc<State>) -> Result<bool> {
+        let check = DeclCheck::new(state);
         ast.accept(&check)?;
         Ok(check.has_error.get())
     }
 }
 
-
-
+#[derive(Debug)]
 pub struct Arena<T> {
-    data: SkipMap<usize, T>,
+    data: RefCell<HashMap<usize, Rc<T>>>,
     next_id: Cell<usize>,
 }
 
-impl<T: Send + 'static> Arena<T> {
+impl<T> Arena<T> {
     pub fn new() -> Arena<T> {
         Arena {
             data: Default::default(),
@@ -53,27 +49,20 @@ impl<T: Send + 'static> Arena<T> {
     pub fn insert(&self, value: T) -> usize {
         let id = self.next_id.get();
         self.next_id.set(id + 1);
-        self.data.insert(id, value);
+        self.data.borrow_mut().insert(id, Rc::new(value));
         id
     }
 
+    #[inline(always)]
     pub fn get(&self, id: usize) -> Option<impl std::ops::Deref<Target = T> + '_> {
-        struct Dummy<'a, K, V> (Entry<'a, K, V>);
-        impl<'a, K, V> Deref for Dummy<'a, K, V> {
-            type Target = V;
-            fn deref(&self) -> &V {
-                self.0.value()
-            }
-        }
-        self.data.get(&id).map(|entry| Dummy(entry))
+        self.data.borrow().get(&id).map(|entry| entry.clone())
     }
 }
 
-unsafe impl<T> Send for Arena<T> {}
-unsafe impl<T> Sync for Arena<T> {}
-
-
-pub static EXPR: LazyLock<Arena<Expr>> = LazyLock::new(|| Arena::new());
+#[derive(Debug)]
+pub struct State {
+    exprs: Arena<Expr>,
+}
 
 pub struct CodeGen<'a> {
     ctx: &'a Context,
@@ -84,10 +73,10 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, mut ast: Ast) -> Result<()> {
+    pub fn compile(&self, mut ast: Ast, state: Rc<State>) -> Result<()> {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
-        let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
+        let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module), state);
         to_ir.run(&mut ast)?;
         let s = module.print_to_string().to_string();
         println!("{}", s);
@@ -100,7 +89,10 @@ fn run() -> Result<()> {
     let input = input.chars().collect::<String>().into_boxed_str();
     let input = RefStr::from(input.to_string());
     let lexer = Lexer::new(input.index(..));
-    let mut parser = Parser::new(lexer, input.index(..));
+    let state = Rc::new(State {
+        exprs: Arena::new(),
+    });
+    let mut parser = Parser::new(lexer, input.index(..), Rc::clone(&state));
     let ast = parser.parse();
     if parser.has_error {
         bail!("parse error");
@@ -108,14 +100,16 @@ fn run() -> Result<()> {
     let Some(ast) = ast else {
         bail!("parse error");
     };
+
+    // debug_ast(&ast, Rc::clone(&state));
     let semantic = Sema;
 
-    if semantic.semantic(&ast)? {
+    if semantic.semantic(&ast, Rc::clone(&state))? {
         bail!("semantic error");
     }
     let ctx = Context::create();
     let codegen = CodeGen::new(&ctx);
-    codegen.compile(ast)
+    codegen.compile(ast, state)
 }
 
 fn main() {

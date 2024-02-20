@@ -1,4 +1,3 @@
-use triomphe::Arc;
 use crate::RefSlice;
 use std::rc::Rc;
 
@@ -83,9 +82,7 @@ impl<'a> RefStrIndex<'a, RefStr> for std::ops::RangeToInclusive<usize> {
 
 impl RefStr {
     pub fn new(s: &str) -> Self {
-        let s = s.as_bytes();
-        let s = s.into_iter().copied().collect::<Vec<_>>();
-        let s: Arc<[u8]> = Arc::from(s);
+        let s: Rc<[u8]> = Rc::from(s.as_bytes().to_owned().into_boxed_slice());
         let ref_slice = RefSlice::new(s);
         Self { ref_slice }
     }
@@ -126,10 +123,10 @@ impl RefStr {
     }
 }
 
-impl From<Arc<str>> for RefStr {
-    fn from(s: Arc<str>) -> Self {
-        // SAFETY: the Arc<str> is guaranteed to be a valid UTF-8 string
-        let s: Arc<[u8]> = unsafe { std::mem::transmute(s) };
+impl From<Rc<str>> for RefStr {
+    fn from(s: Rc<str>) -> Self {
+        // SAFETY: the Rc<str> is guaranteed to be a valid UTF-8 string
+        let s: Rc<[u8]> = unsafe { Rc::from_raw(Rc::into_raw(s) as *const [u8]) };
         Self {
             ref_slice: RefSlice::new(s),
         }
@@ -138,7 +135,7 @@ impl From<Arc<str>> for RefStr {
 
 impl From<String> for RefStr {
     fn from(s: String) -> Self {
-        let s: Arc<str> = Arc::from(s);
+        let s: Rc<str> = Rc::from(s);
         Self::from(s)
     }
 }

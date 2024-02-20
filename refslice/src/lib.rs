@@ -1,7 +1,5 @@
-
-use triomphe::Arc;
-
 pub mod refstr;
+mod rc;
 use std::{
     fmt::Debug, ops::{Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}, rc::Rc
 };
@@ -10,7 +8,7 @@ use std::hash::{Hash, Hasher};
 
 #[derive(Clone)]
 pub struct RefSlice<T> {
-    inner: Arc<[T]>,
+    inner: Rc<[T]>,
     start: usize,
     end: usize,
 }
@@ -47,14 +45,14 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for Range<usize> {
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(RefSlice {
-                inner: Arc::clone(&slice.inner),
+                inner: Rc::clone(&slice.inner),
                 start: slice.start + self.start,
                 end: slice.start + self.end,
             })
         } else {
             if self.start == self.end && self.end == slice.wrapper_len() {
                 Some(RefSlice {
-                    inner: Arc::clone(&slice.inner),
+                    inner: Rc::clone(&slice.inner),
                     start: slice.start + self.start,
                     end: slice.start + self.end,
                 })
@@ -75,7 +73,7 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeTo<usize> {
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(RefSlice {
-                inner: Arc::clone(&slice.inner),
+                inner: Rc::clone(&slice.inner),
                 start: slice.start,
                 end: slice.start + self.end,
             })
@@ -96,14 +94,14 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeToInclusive<usize> {
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(RefSlice {
-                inner: Arc::clone(&slice.inner),
+                inner: Rc::clone(&slice.inner),
                 start: slice.start,
                 end: slice.start + self.end + 1,
             })
         } else {
             if self.end + 1 == slice.wrapper_len() {
                 Some(RefSlice {
-                    inner: Arc::clone(&slice.inner),
+                    inner: Rc::clone(&slice.inner),
                     start: slice.start,
                     end: slice.start + self.end + 1,
                 })
@@ -124,14 +122,14 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeInclusive<usize> {
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(RefSlice {
-                inner: Arc::clone(&slice.inner),
+                inner: Rc::clone(&slice.inner),
                 start: slice.start + *self.start(),
                 end: slice.start + *self.end() + 1,
             })
         } else {
             if self.start() + 1 == slice.wrapper_len() {
                 Some(RefSlice {
-                    inner: Arc::clone(&slice.inner),
+                    inner: Rc::clone(&slice.inner),
                     start: slice.start + *self.start(),
                     end: slice.start + *self.end() + 1,
                 })
@@ -153,14 +151,14 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeFrom<usize> {
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(RefSlice {
-                inner: Arc::clone(&slice.inner),
+                inner: Rc::clone(&slice.inner),
                 start: slice.start + self.start,
                 end: slice.end,
             })
         } else {
             if self.start == slice.wrapper_len() {
                 Some(RefSlice {
-                    inner: Arc::clone(&slice.inner),
+                    inner: Rc::clone(&slice.inner),
                     start: slice.start + self.start,
                     end: slice.end,
                 })
@@ -180,7 +178,7 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeFull {
 
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         Some(RefSlice {
-            inner: Arc::clone(&slice.inner),
+            inner: Rc::clone(&slice.inner),
             start: slice.start,
             end: slice.end,
         })
@@ -197,11 +195,8 @@ impl<T: std::fmt::Debug> std::fmt::Debug for RefSlice<T> {
     }
 }
 
-
-
-
-impl<T> From<Arc<[T]>> for RefSlice<T> {
-    fn from(inner: Arc<[T]>) -> Self {
+impl<T> From<Rc<[T]>> for RefSlice<T> {
+    fn from(inner: Rc<[T]>) -> Self {
         let len = inner.len();
         RefSlice {
             inner,
@@ -213,9 +208,7 @@ impl<T> From<Arc<[T]>> for RefSlice<T> {
 
 impl<T, const N: usize> From<[T; N]> for RefSlice<T> {
     fn from(inner: [T; N]) -> Self {
-        let inner = inner.into_iter().collect::<Vec<_>>();
-        let slice: Arc<[T]> = Arc::from(inner);
-        From::from(slice)
+        From::from(Rc::from(inner))
     }
 }
 
@@ -226,7 +219,7 @@ impl<T> RefSlice<T> {
         self.start..self.end
     }
 
-    pub fn new(inner: Arc<[T]>) -> Self {
+    pub fn new(inner: Rc<[T]>) -> Self {
         From::from(inner)
     }
 
@@ -309,21 +302,21 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let a = Arc::new([1, 2, 3, 4, 5]);
+        let a = Rc::new([1, 2, 3, 4, 5]);
         let b = RefSlice::new(a.clone());
         let c = b.get(1);
         let d = b.get(1..3);
         let empty = b.get(5..5);
         assert_eq!(c, Some(&2));
-        assert_eq!(d, Some(RefSlice::new(Arc::new([2, 3]))));
-        assert_eq!(empty, Some(RefSlice::new(Arc::new([]))));
+        assert_eq!(d, Some(RefSlice::new(Rc::new([2, 3]))));
+        assert_eq!(empty, Some(RefSlice::new(Rc::new([]))));
         let tmp = b.get(..4);
-        assert_eq!(tmp, Some(RefSlice::new(Arc::new([1, 2, 3, 4]))));
+        assert_eq!(tmp, Some(RefSlice::new(Rc::new([1, 2, 3, 4]))));
     }
 
     #[test]
     fn access_out_of_bounds() {
-        let a = Arc::new([1, 2, 3, 4, 5]);
+        let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
 
         assert_eq!(slice.get(5).as_ref(), slice.as_ref().get(5).as_ref());
@@ -339,7 +332,7 @@ mod tests {
 
     #[test]
     fn access_with_empty_slice() {
-        let a: Arc<[i32]> = Arc::new([]);
+        let a: Rc<[i32]> = Rc::new([]);
         let slice = RefSlice::new(a);
 
         assert_eq!(slice.get(0), None);
@@ -364,7 +357,7 @@ mod tests {
 
     #[test]
     fn inclusive_range_edge_case() {
-        let a = Arc::new([1, 2, 3, 4, 5]);
+        let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
         assert_eq!(slice.get(0..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=4).map(|x| x.to_owned()));
         assert_eq!(slice.get(4..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..=4).map(|x| x.to_owned()));
@@ -379,7 +372,7 @@ mod tests {
 
     #[test]
     fn range_from_edge_case() {
-        let a = Arc::new([1, 2, 3, 4, 5]);
+        let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
         assert_eq!(slice.get(5..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(5..).map(|x| x.to_owned()));
         assert_eq!(slice.get(4..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..).map(|x| x.to_owned()));
@@ -388,12 +381,12 @@ mod tests {
 
     #[test]
     fn range_to_edge_case() {
-        let a = Arc::new([1, 2, 3, 4, 5]);
+        let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
 
-        assert_eq!(slice.get(..5), Some(RefSlice::new(Arc::new([1, 2, 3, 4, 5]))));
+        assert_eq!(slice.get(..5), Some(RefSlice::new(Rc::new([1, 2, 3, 4, 5]))));
         assert_eq!(slice.get(..6), None);
-        assert_eq!(slice.get(..0), Some(RefSlice::new(Arc::new([]))));
+        assert_eq!(slice.get(..0), Some(RefSlice::new(Rc::new([]))));
     }
 }
 

@@ -76,10 +76,11 @@ pub struct ToIRVisitor<'ctx> {
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
     name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
+    state: Rc<State>,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, state: Rc<State>) -> Self {
         let builder = context.create_builder();
         let void_ty = context.void_type();
         let int32_ty = context.i32_type();
@@ -96,6 +97,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_zero,
             v: Cell::new(int32_zero.into()),
             name_map: Default::default(),
+            state,
         }
     }
 
@@ -160,7 +162,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
     }
 
     fn visit_index(&self, index: usize) -> Result<()> {
-        let expr = EXPR.get(index).unwrap();
+        let expr = self.state.exprs.get(index).unwrap();
         match &*expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
             Expr::Factor(factor) => self.visit_factor(factor),
