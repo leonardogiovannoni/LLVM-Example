@@ -30,7 +30,7 @@ pub struct ToIRVisitor<'ctx> {
     ptr_ty: inkwell::types::PointerType<'ctx>,
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
-    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
+    name_map: RefCell<HashMap<RefStr, BasicValueEnum<'ctx>>>,
     state: Rc<State>,
 }
 
@@ -83,7 +83,8 @@ impl<'ctx> ToIRVisitor<'ctx> {
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = factor.text.as_str().chars().collect::<String>();
+                let val = factor.text.as_str().chars().collect::<String>().into_boxed_str();
+                let val = RefStr::from(Rc::from(val));
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
                 } else {
@@ -100,7 +101,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         Ok(())
     }
 
-    pub fn run(&self, tree: &mut Ast) -> Result<()> {
+    pub fn run(&self, ast: &mut Ast) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
@@ -110,7 +111,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         let entry = self.context.append_basic_block(main_fn, "entry");
         self.builder.position_at_end(entry);
 
-        tree.accept(self)?;
+        ast.accept(self)?;
 
         let calc_write_fn_type = self.void_ty.fn_type(&[self.int32_ty.into()], false);
         let calc_write_fn =
@@ -132,14 +133,14 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .module
             .add_function("calc_read", read_ftype, Some(Linkage::External));
 
-        for var in with_decl.vars_iter() {
-            let var = var.to_owned();
-            let str_val = self.context.const_string(var.as_bytes(), true);
+        for var in with_decl.vars.iter() {
+            //let var = var.to_owned();
+            let str_val = self.context.const_string(var.as_str().as_bytes(), true);
 
             let global_str = self.module.add_global(
                 str_val.get_type(),
                 Some(AddressSpace::default()),
-                &format!("{}.str", var),
+                &format!("{}.str", var.as_str()),
             );
 
             global_str.set_initializer(&str_val);
@@ -154,7 +155,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .try_as_basic_value()
                 .left()
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
-            self.name_map.borrow_mut().insert(var, left);
+            self.name_map.borrow_mut().insert(var.index(..), left);
         }
         with_decl.expr.accept(self)?;
         Ok(())
