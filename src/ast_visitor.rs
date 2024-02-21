@@ -100,7 +100,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         Ok(())
     }
 
-    pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
+    pub fn run(&self, tree: &mut Ast) -> Result<()> {
         let main_fn_type = self
             .int32_ty
             .fn_type(&[self.int32_ty.into(), self.ptr_ty.into()], false);
