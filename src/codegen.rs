@@ -26,7 +26,7 @@ impl<'a> CodeGen<'a> {
     pub fn compile(&self, exprs: &State, ast: Ast) {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
-        let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
+        let to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
         to_ir.run(exprs, &mut ast).unwrap();
         let s = module.print_to_string().to_string();
         println!("{}", s);
