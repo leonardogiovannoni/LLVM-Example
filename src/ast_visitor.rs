@@ -19,7 +19,43 @@ pub trait AstVisitorTrait<'a> {
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
-impl<'a> ToIRVisitor<'a> {
+
+#[derive(Debug)]
+pub struct ToIRVisitor<'ctx> {
+    context: &'ctx Context,
+    module: Rc<Module<'ctx>>,
+    builder: Builder<'ctx>,
+    void_ty: inkwell::types::VoidType<'ctx>,
+    int32_ty: inkwell::types::IntType<'ctx>,
+    ptr_ty: inkwell::types::PointerType<'ctx>,
+    int32_zero: inkwell::values::IntValue<'ctx>,
+    v: Cell<BasicValueEnum<'ctx>>,
+    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
+    state: Rc<State>,
+}
+
+impl<'ctx> ToIRVisitor<'ctx> {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, state: Rc<State>) -> Self {
+        let builder = context.create_builder();
+        let void_ty = context.void_type();
+        let int32_ty = context.i32_type();
+        let ptr_ty = int32_ty.ptr_type(AddressSpace::default());
+        let int32_zero = int32_ty.const_int(0, true);
+
+        Self {
+            context,
+            module,
+            builder,
+            void_ty,
+            int32_ty,
+            ptr_ty,
+            int32_zero,
+            v: Cell::new(int32_zero.into()),
+            name_map: Default::default(),
+            state,
+        }
+    }
+
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         bin_op.lhs_expr.accept(self)?;
         let left = self.v.get();
@@ -62,43 +98,6 @@ impl<'a> ToIRVisitor<'a> {
             }
         }
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct ToIRVisitor<'ctx> {
-    context: &'ctx Context,
-    module: Rc<Module<'ctx>>,
-    builder: Builder<'ctx>,
-    void_ty: inkwell::types::VoidType<'ctx>,
-    int32_ty: inkwell::types::IntType<'ctx>,
-    ptr_ty: inkwell::types::PointerType<'ctx>,
-    int32_zero: inkwell::values::IntValue<'ctx>,
-    v: Cell<BasicValueEnum<'ctx>>,
-    name_map: RefCell<HashMap<String, BasicValueEnum<'ctx>>>,
-    state: Rc<State>,
-}
-
-impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, state: Rc<State>) -> Self {
-        let builder = context.create_builder();
-        let void_ty = context.void_type();
-        let int32_ty = context.i32_type();
-        let ptr_ty = int32_ty.ptr_type(AddressSpace::default());
-        let int32_zero = int32_ty.const_int(0, true);
-
-        Self {
-            context,
-            module,
-            builder,
-            void_ty,
-            int32_ty,
-            ptr_ty,
-            int32_zero,
-            v: Cell::new(int32_zero.into()),
-            name_map: Default::default(),
-            state,
-        }
     }
 
     pub fn run(&mut self, tree: &mut Ast) -> Result<()> {
