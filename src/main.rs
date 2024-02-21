@@ -79,7 +79,7 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, mut ast: Ast, state: Rc<State>) -> Result<()> {
+    pub fn compile(&self, ast: Ast, state: Rc<State>) -> Result<()> {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module), state);
