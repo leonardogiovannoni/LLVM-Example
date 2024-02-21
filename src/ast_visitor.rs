@@ -88,7 +88,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
                 } else {
-                    panic!("Variable not found");
+                    bail!("Variable \"{}\" not found", factor.text.as_str());
                 }
             }
             _ => {
@@ -134,7 +134,6 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .add_function("calc_read", read_ftype, Some(Linkage::External));
 
         for var in with_decl.vars.iter() {
-            //let var = var.to_owned();
             let str_val = self.context.const_string(var.as_str().as_bytes(), true);
 
             let global_str = self.module.add_global(
