@@ -1,4 +1,3 @@
-#![feature(lazy_cell)]
 mod ast;
 mod ast_visitor;
 mod debug_visitor;
@@ -20,7 +19,8 @@ use refslice::refstr::RefStr;
 
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashMap;
+//use std::collections::HashMap;
+use fxhash::FxHashMap as HashMap;
 use std::rc::Rc;
 pub struct Sema;
 
