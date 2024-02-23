@@ -19,7 +19,6 @@ pub trait AstVisitorTrait<'a> {
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
-
 #[derive(Debug)]
 pub struct ToIRVisitor<'ctx> {
     context: &'ctx Context,
@@ -83,7 +82,12 @@ impl<'ctx> ToIRVisitor<'ctx> {
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = factor.text.as_str().chars().collect::<String>().into_boxed_str();
+                let val = factor
+                    .text
+                    .as_str()
+                    .chars()
+                    .collect::<String>()
+                    .into_boxed_str();
                 let val = RefStr::from(Rc::from(val));
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);

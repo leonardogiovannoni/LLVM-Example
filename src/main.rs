@@ -7,21 +7,20 @@ mod parser;
 mod token;
 use crate::ast::*;
 use crate::ast_visitor::*;
-use crate::debug_visitor::*;
 use crate::decl_check::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
+use debug_visitor::debug_ast;
+use fxhash::FxHashMap as HashMap;
 use inkwell::context::Context;
 use refslice::refstr::RefStr;
-
 use std::cell::Cell;
 use std::cell::RefCell;
-//use std::collections::HashMap;
-use fxhash::FxHashMap as HashMap;
 use std::rc::Rc;
+
 pub struct Sema;
 
 impl Sema {
@@ -34,8 +33,9 @@ impl Sema {
 
 #[derive(Debug)]
 pub struct Arena<T> {
-    data: RefCell<HashMap<usize, Rc<T>>>,
-    next_id: Cell<usize>,
+    // TODO: up to now, we could use UnsafeCell instead of RefCell
+    data: RefCell<HashMap<u32, Rc<T>>>,
+    next_id: Cell<u32>,
 }
 
 impl<T: Default> Default for Arena<T> {
@@ -56,13 +56,26 @@ impl<T> Arena<T> {
         let id = self.next_id.get();
         self.next_id.set(id + 1);
         self.data.borrow_mut().insert(id, Rc::new(value));
-        id
+        id as usize
+        //let b = Box::into_raw(Box::new(value));
+        //b as usize
     }
 
     #[inline(always)]
     pub fn get(&self, id: usize) -> Option<impl std::ops::Deref<Target = T> + '_> {
+        let id = id as u32;
         self.data.borrow().get(&id).cloned()
+        //unsafe {
+        //    (*self.data.get()).get(&id).cloned()
+        //}
+        //let b = id as *const T;
+        //if b.is_null() {
+        //    None
+        //} else {
+        //    Some(unsafe { &*b })
+        //}
     }
+
 }
 
 #[derive(Debug)]
@@ -92,6 +105,7 @@ impl<'a> CodeGen<'a> {
 
 fn run() -> Result<()> {
     let input = std::env::args().nth(1).expect("no input");
+    println!("input: {}", input);
     let input = input.chars().collect::<String>().into_boxed_str();
     let input = RefStr::from(input.to_string());
     let lexer = Lexer::new(input.index(..));
@@ -107,7 +121,7 @@ fn run() -> Result<()> {
         bail!("parse error");
     };
 
-    debug_ast(&ast, Rc::clone(&state));
+    //debug_ast(&ast, Rc::clone(&state));
     let semantic = Sema;
 
     if semantic.semantic(&ast, Rc::clone(&state))? {

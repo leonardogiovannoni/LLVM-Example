@@ -13,6 +13,7 @@ impl<'a> DebugAstVisitor<'a> {
         }
     }
 
+    #[inline(never)]
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let get_pretty_name = |idx: usize| {
             let expr = self.state.exprs.get(idx).unwrap();
@@ -35,8 +36,10 @@ impl<'a> DebugAstVisitor<'a> {
     fn format_expr(&self, expr: &Expr) -> String {
         match expr {
             Expr::BinaryOp(bin_op) => {
-                let lhs = self.format_expr(&self.state.exprs.get(bin_op.lhs_expr).unwrap());
-                let rhs = self.format_expr(&self.state.exprs.get(bin_op.rhs_expr).unwrap());
+                let lhs_expr = self.state.exprs.get(bin_op.lhs_expr).unwrap();
+                let lhs = self.format_expr(&lhs_expr);
+                let rhs_expr = self.state.exprs.get(bin_op.rhs_expr).unwrap();
+                let rhs = self.format_expr(&rhs_expr);
                 let op = format!("{:?}", bin_op.op);
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }

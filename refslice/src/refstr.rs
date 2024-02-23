@@ -87,6 +87,7 @@ impl RefStr {
         Self { ref_slice }
     }
 
+    #[inline(always)]
     pub fn get<'a, I>(&'a self, index: I) -> Option<I::Output>
     where
         I: RefStrIndex<'a, Self>,
@@ -94,6 +95,7 @@ impl RefStr {
         index.get(self)
     }
 
+    #[inline(always)]
     pub fn index<'a, I>(&'a self, index: I) -> I::Output
     where
         I: RefStrIndex<'a, Self>,

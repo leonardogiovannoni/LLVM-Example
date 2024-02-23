@@ -26,6 +26,7 @@ pub trait RefSliceIndex<'a, S: ?Sized + 'a> {
 impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for usize {
     type Output = &'a S;
 
+    #[inline(always)]
     fn get(&self, slice: &'a RefSlice<S>) -> Option<Self::Output> {
         if self.is_in_bounds(slice) {
             Some(&(*slice.inner)[slice.start + *self])
@@ -239,6 +240,7 @@ impl<T> RefSlice<T> {
     pub fn is_empty(&self) -> bool {
         self.wrapper_len() == 0
     }
+    #[inline(always)]
     pub fn get<'a, I>(&'a self, index: I) -> Option<I::Output>
     where
         I: RefSliceIndex<'a, Self>,
@@ -246,6 +248,7 @@ impl<T> RefSlice<T> {
         index.get(self)
     }
 
+    #[inline(always)]
     pub fn index<'a, I: Debug>(&'a self, index: I) -> I::Output
     where
         I: RefSliceIndex<'a, Self>,
