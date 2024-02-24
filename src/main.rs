@@ -106,8 +106,8 @@ impl<'a> CodeGen<'a> {
 fn run() -> Result<()> {
     let input = std::env::args().nth(1).expect("no input");
     println!("input: {}", input);
-    let input = input.chars().collect::<String>().into_boxed_str();
-    let input = RefStr::from(input.to_string());
+    let input = input.chars().collect::<String>();
+    let input = RefStr::from(input);
     let lexer = Lexer::new(input.index(..));
     let state = Rc::new(State {
         exprs: Arena::new(),

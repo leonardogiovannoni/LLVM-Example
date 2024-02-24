@@ -85,8 +85,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
                 let val = factor
                     .text
                     .as_str()
-                    .chars()
-                    .collect::<String>()
+                    .to_owned()
                     .into_boxed_str();
                 let val = RefStr::from(Rc::from(val));
                 if let Some(&val) = self.name_map.borrow().get(&val) {
@@ -96,8 +95,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
                 }
             }
             _ => {
-                let val = factor.text.as_str().chars().collect::<String>();
-                let intval = val.parse().expect("Invalid integer");
+                let intval = factor.text.as_str().parse().expect("Invalid integer");
                 let v = self.int32_ty.const_int(intval, true).into();
                 self.v.set(v);
             }

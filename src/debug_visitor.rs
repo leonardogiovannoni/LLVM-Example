@@ -27,9 +27,8 @@ impl<'a> DebugAstVisitor<'a> {
     }
 
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
-        let val = factor.text.as_str().chars().collect::<String>();
         let kind = format!("{:?}", factor.kind);
-        println!("Factor(kind: {}, val: {})", kind, val);
+        println!("Factor(kind: {}, val: {})", kind, factor.text.as_str());
         Ok(())
     }
 
@@ -44,9 +43,8 @@ impl<'a> DebugAstVisitor<'a> {
                 format!("BinaryOp(lhs: {}, rhs: {}, op: {})", lhs, rhs, op)
             }
             Expr::Factor(factor) => {
-                let val = factor.text.as_str().chars().collect::<String>();
                 let kind = format!("{:?}", factor.kind);
-                format!("Factor(kind: {}, val: {})", kind, val)
+                format!("Factor(kind: {}, val: {})", kind, factor.text.as_str())
             }
         }
     }
