@@ -72,13 +72,13 @@ impl Parser {
         self.guard(
             |p| {
                 let mut vars = Vec::new();
-                if p.token.is(TokenKind::KWWith) {
+                if p.token.kind ==TokenKind::KWWith {
                     p.advance();
                     p.expect(TokenKind::Ident)?;
 
                     vars.push(p.token.text.index(..));
                     p.advance();
-                    while p.token.is(TokenKind::Comma) {
+                    while p.token.kind == TokenKind::Comma {
                         p.advance();
                         p.expect(TokenKind::Ident)?;
                         vars.push(p.token.text.index(..));
