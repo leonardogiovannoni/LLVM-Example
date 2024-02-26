@@ -117,11 +117,11 @@ fn run() -> Result<()> {
     if parser.has_error {
         bail!("parse error");
     }
-    let Some(ast) = ast else {
+    let Ok(ast) = ast else {
         bail!("parse error");
     };
 
-    //debug_ast(&ast, Rc::clone(&state));
+    debug_ast(&ast, Rc::clone(&state));
     let semantic = Sema;
 
     if semantic.semantic(&ast, Rc::clone(&state))? {
