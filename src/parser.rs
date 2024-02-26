@@ -12,7 +12,6 @@ pub struct Parser {
 
 pub struct ParseError;
 
-
 impl Parser {
     pub fn new(lexer: Lexer, buf: RefStr, state: Rc<State>) -> Self {
         let mut parser = Self {
@@ -52,51 +51,54 @@ impl Parser {
         }
     }
 
-    pub fn parse_calc_begin(&mut self) -> Result<Vec<RefStr>, ParseError> {
-        let mut vars = Vec::new();
-        if self.token.is(TokenKind::KWWith) {
+    fn skip_until(&mut self, elems: &[TokenKind]) -> Result<(), ParseError> {
+        while !self.token.is_one_of(elems) {
             self.advance();
-            self.expect(TokenKind::Ident)?;
-
-            vars.push(self.token.text.index(..));
-            self.advance();
-            while self.token.is(TokenKind::Comma) {
-                self.advance();
-                self.expect(TokenKind::Ident)?;
-                vars.push(self.token.text.index(..));
-                self.advance();
-            }
-
-            if self.consume(TokenKind::Colon).is_err() {
-                return Err(ParseError);
-            }
         }
-        Ok(vars)
+        Err(ParseError)
     }
 
-    pub fn parse_calc_mid(&mut self) -> Result<Ast, ParseError> {
-        let vars = self.parse_calc_begin()?;
-        let e = self.parse_expr()?;
-        self.expect(TokenKind::Eoi)?;
-
-        if vars.is_empty() {
-            Ok(Ast::Expr(e))
-        } else {
-            let buf = self.text.index(..);
-            Ok(Ast::WithDecl(WithDecl::new(vars, buf, e)))
+    pub fn guard<F, S>(&mut self, f: F, elems: &[TokenKind]) -> Result<S, ParseError>
+    where
+        F: FnOnce(&mut Self) -> Result<S, ParseError>,
+    {
+        match f(self) {
+            Ok(t) => Ok(t),
+            Err(_err) => Err(self.skip_until(elems).unwrap_err()),
         }
     }
 
     pub fn parse_calc(&mut self) -> Result<Ast, ParseError> {
-        match self.parse_calc_mid() {
-            Ok(ast) => Ok(ast),
-            Err(_) => {
-                while self.token.kind != TokenKind::Eoi {
-                    self.advance();
+        self.guard(
+            |p| {
+                let mut vars = Vec::new();
+                if p.token.is(TokenKind::KWWith) {
+                    p.advance();
+                    p.expect(TokenKind::Ident)?;
+
+                    vars.push(p.token.text.index(..));
+                    p.advance();
+                    while p.token.is(TokenKind::Comma) {
+                        p.advance();
+                        p.expect(TokenKind::Ident)?;
+                        vars.push(p.token.text.index(..));
+                        p.advance();
+                    }
+
+                    p.consume(TokenKind::Colon)?;
                 }
-                Err(ParseError)
-            }
-        }
+                let e = p.parse_expr()?;
+                p.expect(TokenKind::Eoi)?;
+
+                if vars.is_empty() {
+                    Ok(Ast::Expr(e))
+                } else {
+                    let buf = p.text.index(..);
+                    Ok(Ast::WithDecl(WithDecl::new(vars, buf, e)))
+                }
+            },
+            &[TokenKind::Eoi],
+        )
     }
 
     pub fn parse_expr(&mut self) -> Result<usize, ParseError> {
@@ -134,45 +136,43 @@ impl Parser {
     }
 
     pub fn parse_factor(&mut self) -> Result<usize, ParseError> {
-        match self.token.kind {
-            TokenKind::Ident => {
-                let text = self.token.text.index(..);
-                let id = self
-                    .state
-                    .exprs
-                    .insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
-                self.advance();
-                return Ok(id);
-            }
-            TokenKind::Number => {
-                let text = self.token.text.index(..);
-                let id = self
-                    .state
-                    .exprs
-                    .insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
-                self.advance();
-                return Ok(id);
-            }
-            TokenKind::LParen => {
-                self.advance();
-                let res = self.parse_expr();
-                self.consume(TokenKind::RParen)?;
-                res
-            }
-            _ => {
-                while !self.token.is_one_of(&[
-                    TokenKind::Eoi,
-                    TokenKind::RParen,
-                    TokenKind::Slash,
-                    TokenKind::Star,
-                    TokenKind::Plus,
-                    TokenKind::Minus,
-                ]) {
-                    self.advance();
+        self.guard(
+            |p| match p.token.kind {
+                TokenKind::Ident => {
+                    let text = p.token.text.index(..);
+                    let id = p
+                        .state
+                        .exprs
+                        .insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                    p.advance();
+                    Ok(id)
                 }
-                Err(ParseError)
-            }
-        }
+                TokenKind::Number => {
+                    let text = p.token.text.index(..);
+                    let id = p
+                        .state
+                        .exprs
+                        .insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
+                    p.advance();
+                    Ok(id)
+                }
+                TokenKind::LParen => {
+                    p.advance();
+                    let res = p.parse_expr();
+                    p.consume(TokenKind::RParen)?;
+                    res
+                }
+                _ => Err(ParseError),
+            },
+            &[
+                TokenKind::Eoi,
+                TokenKind::RParen,
+                TokenKind::Slash,
+                TokenKind::Star,
+                TokenKind::Plus,
+                TokenKind::Minus,
+            ],
+        )
     }
 
     pub fn parse(&mut self) -> Result<Ast, Error> {
