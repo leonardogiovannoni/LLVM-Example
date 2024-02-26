@@ -75,7 +75,6 @@ impl<T> Arena<T> {
         //    Some(unsafe { &*b })
         //}
     }
-
 }
 
 #[derive(Debug)]

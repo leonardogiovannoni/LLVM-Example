@@ -72,7 +72,7 @@ impl Parser {
         self.guard(
             |p| {
                 let mut vars = Vec::new();
-                if p.token.kind ==TokenKind::KWWith {
+                if p.token.kind == TokenKind::KWWith {
                     p.advance();
                     p.expect(TokenKind::Ident)?;
 

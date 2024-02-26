@@ -82,11 +82,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = factor
-                    .text
-                    .as_str()
-                    .to_owned()
-                    .into_boxed_str();
+                let val = factor.text.as_str().to_owned().into_boxed_str();
                 let val = RefStr::from(Rc::from(val));
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
