@@ -24,7 +24,7 @@ pub enum ErrorType {
 
 impl DeclCheck {
     pub fn new(state: Rc<State>) -> Self {
-        DeclCheck {
+        Self {
             scope: RefCell::new(HashSet::new()),
             has_error: Cell::new(false),
             state,

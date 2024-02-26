@@ -13,7 +13,6 @@ impl<'a> DebugAstVisitor<'a> {
         }
     }
 
-    #[inline(never)]
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let get_pretty_name = |idx: usize| {
             let expr = self.state.exprs.get(idx).unwrap();
