@@ -12,6 +12,9 @@ pub struct Parser {
 
 pub struct ParseError;
 
+
+type PResult<T> = Result<T, ParseError>;
+
 impl Parser {
     pub fn new(lexer: Lexer, buf: RefStr, state: Rc<State>) -> Self {
         let mut parser = Self {
@@ -33,7 +36,7 @@ impl Parser {
         self.lexer.next(&mut self.token);
     }
 
-    pub fn expect(&mut self, kind: TokenKind) -> Result<(), ParseError> {
+    pub fn expect(&mut self, kind: TokenKind) -> PResult<()> {
         if self.token.kind != kind {
             self.error();
             Err(ParseError)
@@ -42,7 +45,7 @@ impl Parser {
         }
     }
 
-    pub fn consume(&mut self, kind: TokenKind) -> Result<(), ParseError> {
+    pub fn consume(&mut self, kind: TokenKind) -> PResult<()> {
         if self.expect(kind).is_err() {
             Err(ParseError)
         } else {
@@ -51,16 +54,16 @@ impl Parser {
         }
     }
 
-    fn skip_until(&mut self, elems: &[TokenKind]) -> Result<(), ParseError> {
+    fn skip_until(&mut self, elems: &[TokenKind]) -> PResult<()> {
         while !self.token.is_one_of(elems) {
             self.advance();
         }
         Err(ParseError)
     }
 
-    pub fn guard<F, S>(&mut self, f: F, elems: &[TokenKind]) -> Result<S, ParseError>
+    pub fn guard<F, S>(&mut self, f: F, elems: &[TokenKind]) -> PResult<S>
     where
-        F: FnOnce(&mut Self) -> Result<S, ParseError>,
+        F: FnOnce(&mut Self) -> PResult<S>,
     {
         match f(self) {
             Ok(t) => Ok(t),
@@ -68,7 +71,7 @@ impl Parser {
         }
     }
 
-    pub fn parse_calc(&mut self) -> Result<Ast, ParseError> {
+    pub fn parse_calc(&mut self) -> PResult<Ast> {
         self.guard(
             |p| {
                 let mut vars = Vec::new();
@@ -101,7 +104,7 @@ impl Parser {
         )
     }
 
-    pub fn parse_expr(&mut self) -> Result<usize, ParseError> {
+    pub fn parse_expr(&mut self) -> PResult<usize> {
         let mut left = self.parse_term()?;
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
@@ -119,7 +122,7 @@ impl Parser {
         Ok(left)
     }
 
-    pub fn parse_term(&mut self) -> Result<usize, ParseError> {
+    pub fn parse_term(&mut self) -> PResult<usize> {
         let mut left = self.parse_factor()?;
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
@@ -135,7 +138,7 @@ impl Parser {
         Ok(left)
     }
 
-    pub fn parse_factor(&mut self) -> Result<usize, ParseError> {
+    pub fn parse_factor(&mut self) -> PResult<usize> {
         self.guard(
             |p| match p.token.kind {
                 TokenKind::Ident => {
