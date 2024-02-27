@@ -29,10 +29,6 @@ impl Token {
         Token { kind, text }
     }
 
-    pub fn is(&self, k: TokenKind) -> bool {
-        self.kind == k
-    }
-
     pub fn is_one_of(&self, ks: &[TokenKind]) -> bool {
         ks.contains(&self.kind)
     }
