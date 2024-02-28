@@ -71,9 +71,9 @@ pub enum Expr {
 #[derive(Debug, Clone, Copy)]
 pub struct ExprIndex(u32);
 
-impl Into<u32> for ExprIndex {
-    fn into(self) -> u32 {
-        self.0
+impl From<ExprIndex> for u32 {
+    fn from(val: ExprIndex) -> Self {
+        val.0
     }
 }
 
