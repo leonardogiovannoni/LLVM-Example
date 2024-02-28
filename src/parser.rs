@@ -142,24 +142,18 @@ impl Parser {
     pub fn parse_factor(&mut self) -> PResult<ExprIndex> {
         self.guard(
             |p| match p.token.kind {
-                TokenKind::Ident => {
+                x @ (TokenKind::Ident | TokenKind::Number) => {
+                    let x = match x {
+                        TokenKind::Ident => ValueKind::Ident,
+                        TokenKind::Number => ValueKind::Number,
+                        _ => unreachable!(),
+                    };
                     let text = p.token.text.index(..);
-                    let expr = p
-                        .state
-                        .exprs
-                        .insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
+                    let expr = p.state.exprs.insert(Expr::Factor(Factor::new(x, text)));
                     p.advance();
                     Ok(expr)
                 }
-                TokenKind::Number => {
-                    let text = p.token.text.index(..);
-                    let expr = p
-                        .state
-                        .exprs
-                        .insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
-                    p.advance();
-                    Ok(expr)
-                }
+
                 TokenKind::LParen => {
                     p.advance();
                     let res = p.parse_expr();
