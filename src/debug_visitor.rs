@@ -14,7 +14,7 @@ impl<'a> DebugAstVisitor<'a> {
     }
 
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
-        let get_pretty_name = |idx: usize| {
+        let get_pretty_name = |idx: ExprIndex| {
             let expr = self.state.exprs.get(idx).unwrap();
             self.format_expr(&expr)
         };
@@ -63,7 +63,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
         Ok(())
     }
 
-    fn visit_index(&self, index: usize) -> Result<()> {
+    fn visit_index(&self, index: ExprIndex) -> Result<()> {
         let index = self.state.exprs.get(index).unwrap();
         match &*index {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),

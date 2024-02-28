@@ -15,7 +15,7 @@ use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
-    fn visit_index(&self, ast: usize) -> Result<()>;
+    fn visit_index(&self, ast: ExprIndex) -> Result<()>;
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
@@ -158,7 +158,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit_index(&self, index: usize) -> Result<()> {
+    fn visit_index(&self, index: ExprIndex) -> Result<()> {
         let expr = self.state.exprs.get(index).unwrap();
         match &*expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),

@@ -12,7 +12,6 @@ pub struct Parser {
 
 pub struct ParseError;
 
-
 type PResult<T> = Result<T, ParseError>;
 
 impl Parser {
@@ -104,7 +103,7 @@ impl Parser {
         )
     }
 
-    pub fn parse_expr(&mut self) -> PResult<usize> {
+    pub fn parse_expr(&mut self) -> PResult<ExprIndex> {
         let mut left = self.parse_term()?;
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
@@ -114,50 +113,52 @@ impl Parser {
             };
             self.advance();
             let right = self.parse_term()?;
-            let binary_op = BinaryOp::new(left, right, op);
-            let expr = Expr::BinaryOp(binary_op);
-            let id = self.state.exprs.insert(expr);
-            left = id;
+            left = self
+                .state
+                .exprs
+                .insert(Expr::BinaryOp(BinaryOp::new(left, right, op)));
         }
         Ok(left)
     }
 
-    pub fn parse_term(&mut self) -> PResult<usize> {
+    pub fn parse_term(&mut self) -> PResult<ExprIndex> {
         let mut left = self.parse_factor()?;
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
                 TokenKind::Star => Operator::Mul,
-                _ => Operator::Div,
+                TokenKind::Slash => Operator::Div,
+                _ => unreachable!(),
             };
             self.advance();
             let right = self.parse_factor()?;
-            let binary_op = BinaryOp::new(left, right, op);
-            let expr = Expr::BinaryOp(binary_op);
-            left = self.state.exprs.insert(expr);
+            left = self
+                .state
+                .exprs
+                .insert(Expr::BinaryOp(BinaryOp::new(left, right, op)));
         }
         Ok(left)
     }
 
-    pub fn parse_factor(&mut self) -> PResult<usize> {
+    pub fn parse_factor(&mut self) -> PResult<ExprIndex> {
         self.guard(
             |p| match p.token.kind {
                 TokenKind::Ident => {
                     let text = p.token.text.index(..);
-                    let id = p
+                    let expr = p
                         .state
                         .exprs
                         .insert(Expr::Factor(Factor::new(ValueKind::Ident, text)));
                     p.advance();
-                    Ok(id)
+                    Ok(expr)
                 }
                 TokenKind::Number => {
                     let text = p.token.text.index(..);
-                    let id = p
+                    let expr = p
                         .state
                         .exprs
                         .insert(Expr::Factor(Factor::new(ValueKind::Number, text)));
                     p.advance();
-                    Ok(id)
+                    Ok(expr)
                 }
                 TokenKind::LParen => {
                     p.advance();

@@ -1,5 +1,7 @@
+mod arena;
 mod ast;
 mod ast_visitor;
+mod codegen;
 mod debug_visitor;
 mod decl_check;
 mod lexer;
@@ -7,99 +9,24 @@ mod parser;
 mod token;
 use crate::ast::*;
 use crate::ast_visitor::*;
+use crate::codegen::CodeGen;
+use crate::codegen::Sema;
 use crate::decl_check::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
+use arena::Arena;
 use debug_visitor::debug_ast;
-use fxhash::FxHashMap as HashMap;
 use inkwell::context::Context;
 use refslice::refstr::RefStr;
-use std::cell::Cell;
-use std::cell::RefCell;
+
 use std::rc::Rc;
-
-pub struct Sema;
-
-impl Sema {
-    pub fn semantic(&self, ast: &Ast, state: Rc<State>) -> Result<bool> {
-        let check = DeclCheck::new(state);
-        ast.accept(&check)?;
-        Ok(check.has_error.get())
-    }
-}
-
-#[derive(Debug)]
-pub struct Arena<T> {
-    // TODO: up to now, we could use UnsafeCell instead of RefCell
-    data: RefCell<HashMap<u32, Rc<T>>>,
-    next_id: Cell<u32>,
-}
-
-impl<T: Default> Default for Arena<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> Arena<T> {
-    pub fn new() -> Arena<T> {
-        Arena {
-            data: Default::default(),
-            next_id: Cell::new(1),
-        }
-    }
-
-    pub fn insert(&self, value: T) -> usize {
-        let id = self.next_id.get();
-        self.next_id.set(id + 1);
-        self.data.borrow_mut().insert(id, Rc::new(value));
-        id as usize
-        //let b = Box::into_raw(Box::new(value));
-        //b as usize
-    }
-
-    #[inline(always)]
-    pub fn get(&self, id: usize) -> Option<impl std::ops::Deref<Target = T> + '_> {
-        let id = id as u32;
-        self.data.borrow().get(&id).cloned()
-        //unsafe {
-        //    (*self.data.get()).get(&id).cloned()
-        //}
-        //let b = id as *const T;
-        //if b.is_null() {
-        //    None
-        //} else {
-        //    Some(unsafe { &*b })
-        //}
-    }
-}
 
 #[derive(Debug)]
 pub struct State {
-    exprs: Arena<Expr>,
-}
-
-pub struct CodeGen<'a> {
-    ctx: &'a Context,
-}
-
-impl<'a> CodeGen<'a> {
-    pub fn new(ctx: &'a Context) -> Self {
-        CodeGen { ctx }
-    }
-
-    pub fn compile(&self, ast: Ast, state: Rc<State>) -> Result<()> {
-        let module = self.ctx.create_module("calc.expr");
-        let module = Rc::new(module);
-        let to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module), state);
-        to_ir.run(&ast)?;
-        let s = module.print_to_string().to_string();
-        println!("{}", s);
-        Ok(())
-    }
+    exprs: Arena<ExprIndex, Expr>,
 }
 
 fn run() -> Result<()> {
