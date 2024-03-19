@@ -38,10 +38,7 @@ impl<T: ?Sized> Clone for Rc<T> {
 
 impl<T: ?Sized> Drop for Rc<T> {
     fn drop(&mut self) {
-        let this = unsafe {
-            &(*self.ptr.as_ptr())
-            
-        };
+        let this = unsafe { &(*self.ptr.as_ptr()) };
         // SAFETY if the ref_count is 1, then we are the last reference to this data
         if this.ref_count.get() == 1 {
             // so we need to deallocate the data
@@ -49,9 +46,7 @@ impl<T: ?Sized> Drop for Rc<T> {
             drop(b);
         } else {
             // otherwise, we need to decrement the ref_count
-            this
-                .ref_count
-                .set(this.ref_count.get() - 1);
+            this.ref_count.set(this.ref_count.get() - 1);
         }
     }
 }

@@ -1,7 +1,9 @@
-pub mod refstr;
 mod rc;
+pub mod refstr;
 use std::{
-    fmt::Debug, ops::{Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive}, rc::Rc
+    fmt::Debug,
+    ops::{Index, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive},
+    rc::Rc,
 };
 
 use std::hash::{Hash, Hasher};
@@ -12,7 +14,6 @@ pub struct RefSlice<T> {
     start: usize,
     end: usize,
 }
-
 
 // Added the lifetime 'a to the trait to indicate the lifetime of references returned by get.
 pub trait RefSliceIndex<'a, S: ?Sized + 'a> {
@@ -88,7 +89,6 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeTo<usize> {
     }
 }
 
-
 impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeToInclusive<usize> {
     type Output = RefSlice<S>;
 
@@ -108,7 +108,7 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeToInclusive<usize> {
                 })
             } else {
                 None
-            } 
+            }
         }
     }
 
@@ -143,7 +143,6 @@ impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeInclusive<usize> {
     fn is_in_bounds(&self, slice: &RefSlice<S>) -> bool {
         *self.start() < slice.wrapper_len() && *self.end() < slice.wrapper_len()
     }
-
 }
 
 impl<'a, S: 'a> RefSliceIndex<'a, RefSlice<S>> for RangeFrom<usize> {
@@ -213,8 +212,6 @@ impl<T, const N: usize> From<[T; N]> for RefSlice<T> {
     }
 }
 
-
-
 impl<T> RefSlice<T> {
     fn range(&self) -> Range<usize> {
         self.start..self.end
@@ -231,7 +228,6 @@ impl<T> RefSlice<T> {
     pub fn iter(&self) -> std::slice::Iter<T> {
         self.as_ref().iter()
     }
-
 
     fn wrapper_len(&self) -> usize {
         self.range().len()
@@ -252,7 +248,7 @@ impl<T> RefSlice<T> {
     pub fn index<'a, I: Debug>(&'a self, index: I) -> I::Output
     where
         I: RefSliceIndex<'a, Self>,
-    {        
+    {
         index.get(self).unwrap()
     }
 
@@ -282,7 +278,6 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
-
 impl<T: PartialEq> PartialEq for RefSlice<T> {
     fn eq(&self, other: &Self) -> bool {
         self.as_ref() == other.as_ref()
@@ -291,13 +286,11 @@ impl<T: PartialEq> PartialEq for RefSlice<T> {
 
 impl<T: Eq> Eq for RefSlice<T> {}
 
-
 impl<T: Hash> Hash for RefSlice<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_ref().hash(state);
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -323,14 +316,38 @@ mod tests {
         let slice = RefSlice::new(a);
 
         assert_eq!(slice.get(5).as_ref(), slice.as_ref().get(5).as_ref());
-        assert_eq!(slice.get(0..100).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..100).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..6).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..6).map(|x| x.to_owned()));
-        assert_eq!(slice.get(4..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..=4).map(|x| x.to_owned()));
-        assert_eq!(slice.get(4..5).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..5).map(|x| x.to_owned()));
-        assert_eq!(slice.get(5..5).map(|x| x.as_ref().to_owned()), slice.as_ref().get(5..5).map(|x| x.to_owned()));
-        assert_eq!(slice.get(6..6).map(|x| x.as_ref().to_owned()), slice.as_ref().get(6..6).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..6).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..6).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=5).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=5).map(|x| x.to_owned()));
+        assert_eq!(
+            slice.get(0..100).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..100).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..6).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..6).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(4..=4).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(4..=4).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(4..5).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(4..5).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(5..5).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(5..5).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(6..6).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(6..6).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..6).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..6).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=5).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=5).map(|x| x.to_owned())
+        );
     }
 
     #[test]
@@ -339,47 +356,130 @@ mod tests {
         let slice = RefSlice::new(a);
 
         assert_eq!(slice.get(0), None);
-        assert_eq!(slice.get(0..0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..1).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..=1).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=1).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..=1).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..=1).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..=1).map(|x| x.to_owned()));
-
+        assert_eq!(
+            slice.get(0..0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..1).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..=1).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=1).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..=1).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..=1).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..=1).map(|x| x.to_owned())
+        );
     }
 
     #[test]
     fn inclusive_range_edge_case() {
         let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
-        assert_eq!(slice.get(0..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=4).map(|x| x.to_owned()));
-        assert_eq!(slice.get(4..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..=4).map(|x| x.to_owned()));
-        assert_eq!(slice.get(5..=5).map(|x| x.as_ref().to_owned()), slice.as_ref().get(5..=5).map(|x| x.to_owned()));
-        assert_eq!(slice.get(6..=6).map(|x| x.as_ref().to_owned()), slice.as_ref().get(6..=6).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=5).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=5).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=4).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=4).map(|x| x.to_owned()));
-        assert_eq!(slice.get(..=6).map(|x| x.as_ref().to_owned()), slice.as_ref().get(..=6).map(|x| x.to_owned()));
-        assert_eq!(slice.get(0..=0).map(|x| x.as_ref().to_owned()), slice.as_ref().get(0..=0).map(|x| x.to_owned()));
-        assert_eq!(slice.get(1..=1).map(|x| x.as_ref().to_owned()), slice.as_ref().get(1..=1).map(|x| x.to_owned()));
+        assert_eq!(
+            slice.get(0..=4).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=4).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(4..=4).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(4..=4).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(5..=5).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(5..=5).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(6..=6).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(6..=6).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=5).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=5).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=4).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=4).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(..=6).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(..=6).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(0..=0).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(0..=0).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(1..=1).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(1..=1).map(|x| x.to_owned())
+        );
     }
 
     #[test]
     fn range_from_edge_case() {
         let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
-        assert_eq!(slice.get(5..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(5..).map(|x| x.to_owned()));
-        assert_eq!(slice.get(4..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(4..).map(|x| x.to_owned()));
-        assert_eq!(slice.get(6..).map(|x| x.as_ref().to_owned()), slice.as_ref().get(6..).map(|x| x.to_owned()));
+        assert_eq!(
+            slice.get(5..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(5..).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(4..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(4..).map(|x| x.to_owned())
+        );
+        assert_eq!(
+            slice.get(6..).map(|x| x.as_ref().to_owned()),
+            slice.as_ref().get(6..).map(|x| x.to_owned())
+        );
     }
 
     #[test]
@@ -387,11 +487,11 @@ mod tests {
         let a = Rc::new([1, 2, 3, 4, 5]);
         let slice = RefSlice::new(a);
 
-        assert_eq!(slice.get(..5), Some(RefSlice::new(Rc::new([1, 2, 3, 4, 5]))));
+        assert_eq!(
+            slice.get(..5),
+            Some(RefSlice::new(Rc::new([1, 2, 3, 4, 5])))
+        );
         assert_eq!(slice.get(..6), None);
         assert_eq!(slice.get(..0), Some(RefSlice::new(Rc::new([]))));
     }
 }
-
-
-

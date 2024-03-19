@@ -47,7 +47,7 @@ fn run() -> Result<()> {
         bail!("parse error");
     };
 
-    debug_ast(&ast, Rc::clone(&state));
+    //debug_ast(&ast, Rc::clone(&state));
     let semantic = Sema;
 
     if semantic.semantic(&ast, Rc::clone(&state))? {
