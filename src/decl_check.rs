@@ -7,12 +7,15 @@ use std::{
 use anyhow::{bail, Result};
 use refslice::refstr::RefStr;
 
-use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
+use crate::{
+    Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, ExprIndex, Factor, State, ValueKind, WithDecl,
+};
 
 #[derive(Debug)]
 pub struct DeclCheck {
     pub scope: RefCell<HashSet<RefStr>>,
     pub has_error: Cell<bool>,
+    pub state: Rc<State>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,19 +25,22 @@ pub enum ErrorType {
 }
 
 impl DeclCheck {
-    pub fn new() -> Self {
-        DeclCheck {
+    pub fn new(state: Rc<State>) -> Self {
+        Self {
             scope: RefCell::new(HashSet::new()),
             has_error: Cell::new(false),
+            state,
         }
     }
 
+    #[inline(always)]
     fn visit_binary_op(&self, ast: &BinaryOp) -> Result<()> {
         ast.lhs_expr.accept(self)?;
         ast.rhs_expr.accept(self)?;
         Ok(())
     }
 
+    #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&ast.text) {
             self.error(ErrorType::Not, ast.text.index(..));
@@ -65,8 +71,9 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit_index(&self, ast: &Rc<Expr>) -> Result<()> {
-        match ast.as_ref() {
+    fn visit_index(&self, ast: ExprIndex) -> Result<()> {
+        let expr = self.state.exprs.get(ast).unwrap();
+        match &*expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
             Expr::Factor(factor) => self.visit_factor(factor),
         }
@@ -75,7 +82,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Expr(index) => self.visit_index(index),
+            Ast::Expr(index) => self.visit_index(*index),
         }
     }
 }

@@ -1,5 +1,7 @@
+mod arena;
 mod ast;
 mod ast_visitor;
+mod codegen;
 mod debug_visitor;
 mod decl_check;
 mod lexer;
@@ -7,69 +9,53 @@ mod parser;
 mod token;
 use crate::ast::*;
 use crate::ast_visitor::*;
-use crate::debug_visitor::*;
+use crate::codegen::CodeGen;
+use crate::codegen::Sema;
 use crate::decl_check::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
+use arena::Arena;
+use debug_visitor::debug_ast;
 use inkwell::context::Context;
 use refslice::refstr::RefStr;
 
 use std::rc::Rc;
-pub struct Sema;
 
-impl Sema {
-    pub fn semantic(&self, ast: &Ast) -> Result<bool> {
-        let check = DeclCheck::new();
-        ast.accept(&check)?;
-        Ok(check.has_error.get())
-    }
-}
-
-pub struct CodeGen<'a> {
-    ctx: &'a Context,
-}
-
-impl<'a> CodeGen<'a> {
-    pub fn new(ctx: &'a Context) -> Self {
-        CodeGen { ctx }
-    }
-
-    pub fn compile(&self, mut ast: Ast) -> Result<()> {
-        let module = self.ctx.create_module("calc.expr");
-        let module = Rc::new(module);
-        let mut to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
-        to_ir.run(&mut ast)?;
-        let s = module.print_to_string().to_string();
-        println!("{}", s);
-        Ok(())
-    }
+#[derive(Debug)]
+pub struct State {
+    exprs: Arena<ExprIndex, Expr>,
 }
 
 fn run() -> Result<()> {
-    let input = std::env::args().skip(1).next().expect("no input");
-    let input = input.chars().collect::<String>().into_boxed_str();
-    let input = RefStr::from(Rc::from(input));
+    let input = std::env::args().nth(1).expect("no input");
+    println!("input: {}", input);
+    let input = input.chars().collect::<String>();
+    let input = RefStr::from(input);
     let lexer = Lexer::new(input.index(..));
-    let mut parser = Parser::new(lexer, input.index(..));
+    let state = Rc::new(State {
+        exprs: Arena::new(),
+    });
+    let mut parser = Parser::new(lexer, input.index(..), Rc::clone(&state));
     let ast = parser.parse();
     if parser.has_error {
         bail!("parse error");
     }
-    let Some(ast) = ast else {
+    let Ok(ast) = ast else {
         bail!("parse error");
     };
-    debug_ast(&ast);
+
+    //debug_ast(&ast, Rc::clone(&state));
     let semantic = Sema;
 
-    if semantic.semantic(&ast)? {
+    if semantic.semantic(&ast, Rc::clone(&state))? {
         bail!("semantic error");
     }
     let ctx = Context::create();
     let codegen = CodeGen::new(&ctx);
-    codegen.compile(ast)
+    codegen.compile(ast, state)
 }
 
 fn main() {

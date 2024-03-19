@@ -1,6 +1,5 @@
-use std::rc::Rc;
 use crate::RefSlice;
-
+use std::rc::Rc;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RefStr {
@@ -13,15 +12,10 @@ impl std::fmt::Debug for RefStr {
     }
 }
 
-
-
-
 pub trait RefStrIndex<'a, S: 'a> {
     type Output: 'a;
 
     fn get(self, s: &'a S) -> Option<Self::Output>;
-
-
 }
 
 impl<'a> RefStrIndex<'a, RefStr> for usize {
@@ -86,9 +80,6 @@ impl<'a> RefStrIndex<'a, RefStr> for std::ops::RangeToInclusive<usize> {
     }
 }
 
-
-
-
 impl RefStr {
     pub fn new(s: &str) -> Self {
         let s: Rc<[u8]> = Rc::from(s.as_bytes().to_owned().into_boxed_slice());
@@ -96,6 +87,7 @@ impl RefStr {
         Self { ref_slice }
     }
 
+    #[inline(always)]
     pub fn get<'a, I>(&'a self, index: I) -> Option<I::Output>
     where
         I: RefStrIndex<'a, Self>,
@@ -103,6 +95,7 @@ impl RefStr {
         index.get(self)
     }
 
+    #[inline(always)]
     pub fn index<'a, I>(&'a self, index: I) -> I::Output
     where
         I: RefStrIndex<'a, Self>,
@@ -119,10 +112,8 @@ impl RefStr {
     }
 
     pub fn as_str(&self) -> &str {
-        unsafe {
-            // SAFETY: the RefStr is guaranteed to be a valid UTF-8 string
-            std::str::from_utf8_unchecked(self.as_ref())
-        }
+        // SAFETY: the RefStr is guaranteed to be a valid UTF-8 string
+        unsafe { std::str::from_utf8_unchecked(self.as_ref()) }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = char> + '_ {
@@ -132,18 +123,22 @@ impl RefStr {
     pub fn first(&self) -> Option<char> {
         self.as_str().chars().next()
     }
-
-
 }
 
 impl From<Rc<str>> for RefStr {
     fn from(s: Rc<str>) -> Self {
-        // convert the Rc<str> to a Rc<[u8]>
-        let s: Rc<[u8]> = unsafe {
-            // SAFETY: the Rc<str> is guaranteed to be a valid UTF-8 string
-            std::mem::transmute(s)
-        };
-        Self { ref_slice: RefSlice::new(s) }
+        // SAFETY: the Rc<str> is guaranteed to be a valid UTF-8 string
+        let s: Rc<[u8]> = unsafe { Rc::from_raw(Rc::into_raw(s) as *const [u8]) };
+        Self {
+            ref_slice: RefSlice::new(s),
+        }
+    }
+}
+
+impl From<String> for RefStr {
+    fn from(s: String) -> Self {
+        let s: Rc<str> = Rc::from(s);
+        Self::from(s)
     }
 }
 
@@ -155,10 +150,7 @@ impl AsRef<[u8]> for RefStr {
 
 impl AsRef<str> for RefStr {
     fn as_ref(&self) -> &str {
-        unsafe {
-            // SAFETY: the RefStr is guaranteed to be a valid UTF-8 string
-            std::str::from_utf8_unchecked(self.as_ref())
-        }
+        // SAFETY: the RefStr is guaranteed to be a valid UTF-8 string
+        unsafe { std::str::from_utf8_unchecked(self.as_ref()) }
     }
 }
-
