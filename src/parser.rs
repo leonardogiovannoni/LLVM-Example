@@ -7,7 +7,6 @@ pub struct Parser {
     pub token: Token,
     pub has_error: bool,
     pub text: RefStr,
-    pub state: Rc<State>,
 }
 
 pub struct ParseError;
@@ -15,13 +14,12 @@ pub struct ParseError;
 type PResult<T> = Result<T, ParseError>;
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: RefStr, state: Rc<State>) -> Self {
+    pub fn new(lexer: Lexer, buf: RefStr) -> Self {
         let mut parser = Self {
             lexer,
             token: Token::new(TokenKind::Unknown, RefStr::new("")),
             has_error: false,
             text: buf,
-            state,
         };
         parser.advance();
         parser
@@ -93,17 +91,17 @@ impl Parser {
                 p.expect(TokenKind::Eoi)?;
 
                 if vars.is_empty() {
-                    Ok(Ast::Expr(e))
+                    Ok(Ast::Expr(Box::new(e)))
                 } else {
                     let buf = p.text.index(..);
-                    Ok(Ast::WithDecl(WithDecl::new(vars, buf, e)))
+                    Ok(Ast::WithDecl(Box::new(WithDecl::new(vars, buf, e))))
                 }
             },
             &[TokenKind::Eoi],
         )
     }
 
-    pub fn parse_expr(&mut self) -> PResult<ExprIndex> {
+    pub fn parse_expr(&mut self) -> PResult<Expr> {
         let mut left = self.parse_term()?;
         while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
             let op = match self.token.kind {
@@ -113,15 +111,12 @@ impl Parser {
             };
             self.advance();
             let right = self.parse_term()?;
-            left = self
-                .state
-                .exprs
-                .insert(Expr::BinaryOp(BinaryOp::new(left, right, op)));
+            left = Expr::BinaryOp(BinaryOp::new(left, right, op));
         }
         Ok(left)
     }
 
-    pub fn parse_term(&mut self) -> PResult<ExprIndex> {
+    pub fn parse_term(&mut self) -> PResult<Expr> {
         let mut left = self.parse_factor()?;
         while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
             let op = match self.token.kind {
@@ -131,15 +126,12 @@ impl Parser {
             };
             self.advance();
             let right = self.parse_factor()?;
-            left = self
-                .state
-                .exprs
-                .insert(Expr::BinaryOp(BinaryOp::new(left, right, op)));
+            left = Expr::BinaryOp(BinaryOp::new(left, right, op));
         }
         Ok(left)
     }
 
-    pub fn parse_factor(&mut self) -> PResult<ExprIndex> {
+    pub fn parse_factor(&mut self) -> PResult<Expr> {
         self.guard(
             |p| match p.token.kind {
                 x @ (TokenKind::Ident | TokenKind::Number) => {
@@ -149,7 +141,7 @@ impl Parser {
                         _ => unreachable!(),
                     };
                     let text = p.token.text.index(..);
-                    let expr = p.state.exprs.insert(Expr::Factor(Factor::new(x, text)));
+                    let expr = Expr::Factor(Factor::new(x, text));
                     p.advance();
                     Ok(expr)
                 }

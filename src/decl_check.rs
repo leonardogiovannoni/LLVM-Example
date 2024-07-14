@@ -7,15 +7,12 @@ use std::{
 use anyhow::{bail, Result};
 use refslice::refstr::RefStr;
 
-use crate::{
-    Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, ExprIndex, Factor, State, ValueKind, WithDecl,
-};
+use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
 
 #[derive(Debug)]
 pub struct DeclCheck {
     pub scope: RefCell<HashSet<RefStr>>,
     pub has_error: Cell<bool>,
-    pub state: Rc<State>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,11 +22,10 @@ pub enum ErrorType {
 }
 
 impl DeclCheck {
-    pub fn new(state: Rc<State>) -> Self {
+    pub fn new() -> Self {
         Self {
             scope: RefCell::new(HashSet::new()),
             has_error: Cell::new(false),
-            state,
         }
     }
 
@@ -71,9 +67,8 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
         Ok(())
     }
 
-    fn visit_index(&self, ast: ExprIndex) -> Result<()> {
-        let expr = self.state.exprs.get(ast).unwrap();
-        match &*expr {
+    fn visit_expr(&self, expr: &Expr) -> Result<()> {
+        match expr {
             Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
             Expr::Factor(factor) => self.visit_factor(factor),
         }
@@ -82,7 +77,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Expr(index) => self.visit_index(*index),
+            Ast::Expr(expr) => self.visit_expr(expr),
         }
     }
 }

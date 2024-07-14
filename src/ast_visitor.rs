@@ -15,7 +15,7 @@ use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;
-    fn visit_index(&self, ast: ExprIndex) -> Result<()>;
+    fn visit_expr(&self, ast: &Expr) -> Result<()>;
     fn visit(&self, ast: &Ast) -> Result<()>;
 }
 
@@ -30,11 +30,10 @@ pub struct ToIRVisitor<'ctx> {
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
     name_map: RefCell<HashMap<RefStr, BasicValueEnum<'ctx>>>,
-    state: Rc<State>,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, state: Rc<State>) -> Self {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
         let builder = context.create_builder();
         let void_ty = context.void_type();
         let int32_ty = context.i32_type();
@@ -51,7 +50,6 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_zero,
             v: Cell::new(int32_zero.into()),
             name_map: Default::default(),
-            state,
         }
     }
 
@@ -158,18 +156,17 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
         Ok(())
     }
 
-    fn visit_index(&self, index: ExprIndex) -> Result<()> {
-        let expr = self.state.exprs.get(index).unwrap();
-        match &*expr {
-            Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
-            Expr::Factor(factor) => self.visit_factor(factor),
+    fn visit_expr(&self, expr: &Expr) -> Result<()> {
+        match expr {
+            Expr::BinaryOp(bin_op) => self.visit_binary_op(&bin_op),
+            Expr::Factor(factor) => self.visit_factor(&factor),
         }
     }
 
     fn visit(&self, ast: &Ast) -> Result<()> {
         match ast {
             Ast::WithDecl(with_decl) => self.visit_with_decl(with_decl),
-            Ast::Expr(index) => self.visit_index(*index),
+            Ast::Expr(expr) => self.visit_expr(expr),
         }
     }
 }
