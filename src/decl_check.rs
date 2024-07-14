@@ -1,7 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
     collections::HashSet,
-    rc::Rc,
 };
 
 use anyhow::{bail, Result};

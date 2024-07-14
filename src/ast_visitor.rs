@@ -158,8 +158,8 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
 
     fn visit_expr(&self, expr: &Expr) -> Result<()> {
         match expr {
-            Expr::BinaryOp(bin_op) => self.visit_binary_op(&bin_op),
-            Expr::Factor(factor) => self.visit_factor(&factor),
+            Expr::BinaryOp(bin_op) => self.visit_binary_op(bin_op),
+            Expr::Factor(factor) => self.visit_factor(factor),
         }
     }
 

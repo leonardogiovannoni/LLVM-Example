@@ -48,7 +48,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
             .collect::<Vec<_>>();
 
         let tmp = &with_decl.expr;
-        let expr = self.format_expr(&tmp);
+        let expr = self.format_expr(tmp);
         let vars = format!("{:?}", vars);
         println!("WithDecl(vars: {}, expr: {})", vars, expr);
         Ok(())
