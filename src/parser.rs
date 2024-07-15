@@ -34,76 +34,65 @@ impl Parser {
     }
 
     pub fn expect(&mut self, kind: TokenKind) -> PResult<()> {
-        if self.token.kind != kind {
+        if self.token.kind == kind {
+            Ok(())
+        } else {
             self.error();
             Err(ParseError)
-        } else {
-            Ok(())
         }
     }
 
     pub fn consume(&mut self, kind: TokenKind) -> PResult<()> {
-        if self.expect(kind).is_err() {
-            Err(ParseError)
-        } else {
+        if self.token.kind == kind {
             self.advance();
             Ok(())
+        } else {
+            self.error();
+            Err(ParseError)
         }
     }
 
-    fn skip_until(&mut self, elems: &[TokenKind]) -> PResult<()> {
-        while !self.token.is_one_of(elems) {
+    fn skip_until(&mut self, f: impl Fn(TokenKind) -> bool) {
+        while !f(self.token.kind) {
             self.advance();
-        }
-        Err(ParseError)
-    }
-
-    pub fn guard<F, S>(&mut self, f: F, elems: &[TokenKind]) -> PResult<S>
-    where
-        F: FnOnce(&mut Self) -> PResult<S>,
-    {
-        match f(self) {
-            Ok(t) => Ok(t),
-            Err(_err) => Err(self.skip_until(elems).unwrap_err()),
         }
     }
 
     pub fn parse_calc(&mut self) -> PResult<Ast> {
-        self.guard(
-            |p| {
-                let mut vars = Vec::new();
-                if p.token.kind == TokenKind::KWWith {
-                    p.advance();
-                    p.expect(TokenKind::Ident)?;
-
-                    vars.push(p.token.text.index(..));
-                    p.advance();
-                    while p.token.kind == TokenKind::Comma {
-                        p.advance();
-                        p.expect(TokenKind::Ident)?;
-                        vars.push(p.token.text.index(..));
-                        p.advance();
-                    }
-
-                    p.consume(TokenKind::Colon)?;
+        (|| -> PResult<Ast> {
+            let mut vars = Vec::new();
+            if let TokenKind::KWWith = self.token.kind {
+                self.consume(TokenKind::KWWith)?;
+                self.expect(TokenKind::Ident)?;
+                vars.push(self.token.text.index(..));
+                self.advance();
+                while let TokenKind::Comma = self.token.kind {
+                    self.consume(TokenKind::Comma)?;
+                    self.expect(TokenKind::Ident)?;
+                    vars.push(self.token.text.index(..));
+                    self.advance();
                 }
-                let e = p.parse_expr()?;
-                p.expect(TokenKind::Eoi)?;
+                self.consume(TokenKind::Colon)?;
+            }
+            let e = self.parse_expr()?;
+            self.expect(TokenKind::Eoi)?;
 
-                if vars.is_empty() {
-                    Ok(Ast::Expr(Box::new(e)))
-                } else {
-                    let buf = p.text.index(..);
-                    Ok(Ast::WithDecl(Box::new(WithDecl::new(vars, buf, e))))
-                }
-            },
-            &[TokenKind::Eoi],
-        )
+            if vars.is_empty() {
+                Ok(Ast::Expr(Box::new(e)))
+            } else {
+                let buf = self.text.index(..);
+                Ok(Ast::WithDecl(Box::new(WithDecl::new(vars, buf, e))))
+            }
+        })()
+        .map_err(|_| {
+            self.skip_until(|t| t == TokenKind::Eoi);
+            ParseError
+        })
     }
 
     pub fn parse_expr(&mut self) -> PResult<Expr> {
         let mut left = self.parse_term()?;
-        while self.token.is_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
+        while let TokenKind::Plus | TokenKind::Minus = self.token.kind {
             let op = match self.token.kind {
                 TokenKind::Plus => Operator::Plus,
                 TokenKind::Minus => Operator::Minus,
@@ -118,7 +107,7 @@ impl Parser {
 
     pub fn parse_term(&mut self) -> PResult<Expr> {
         let mut left = self.parse_factor()?;
-        while self.token.is_one_of(&[TokenKind::Star, TokenKind::Slash]) {
+        while let TokenKind::Star | TokenKind::Slash = self.token.kind {
             let op = match self.token.kind {
                 TokenKind::Star => Operator::Mul,
                 TokenKind::Slash => Operator::Div,
@@ -132,37 +121,38 @@ impl Parser {
     }
 
     pub fn parse_factor(&mut self) -> PResult<Expr> {
-        self.guard(
-            |p| match p.token.kind {
-                x @ (TokenKind::Ident | TokenKind::Number) => {
-                    let x = match x {
-                        TokenKind::Ident => ValueKind::Ident,
-                        TokenKind::Number => ValueKind::Number,
-                        _ => unreachable!(),
-                    };
-                    let text = p.token.text.index(..);
-                    let expr = Expr::Factor(Factor::new(x, text));
-                    p.advance();
-                    Ok(expr)
-                }
-
-                TokenKind::LParen => {
-                    p.advance();
-                    let res = p.parse_expr();
-                    p.consume(TokenKind::RParen)?;
-                    res
-                }
-                _ => Err(ParseError),
-            },
-            &[
-                TokenKind::Eoi,
-                TokenKind::RParen,
-                TokenKind::Slash,
-                TokenKind::Star,
-                TokenKind::Plus,
-                TokenKind::Minus,
-            ],
-        )
+        (|| -> PResult<Expr> {
+            if let TokenKind::Ident | TokenKind::Number = self.token.kind {
+                let x = match self.token.kind {
+                    TokenKind::Ident => ValueKind::Ident,
+                    TokenKind::Number => ValueKind::Number,
+                    _ => unreachable!(),
+                };
+                let text = self.token.text.index(..);
+                let expr = Expr::Factor(Factor::new(x, text));
+                self.advance();
+                Ok(expr)
+            } else {
+                self.consume(TokenKind::LParen)?;
+                let res = self.parse_expr();
+                self.consume(TokenKind::RParen)?;
+                res
+            }
+        })()
+        .map_err(|_| {
+            self.skip_until(|t| {
+                matches!(
+                    t,
+                    TokenKind::Eoi
+                        | TokenKind::RParen
+                        | TokenKind::Slash
+                        | TokenKind::Star
+                        | TokenKind::Plus
+                        | TokenKind::Minus
+                )
+            });
+            ParseError
+        })
     }
 
     pub fn parse(&mut self) -> Result<Ast, Error> {
