@@ -24,13 +24,11 @@ impl<'a> CodeGen<'a> {
         CodeGen { ctx }
     }
 
-    pub fn compile(&self, ast: Ast) -> Result<()> {
+    pub fn compile(&self, ast: Ast) -> Result<String> {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
         let to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module));
         to_ir.run(&ast)?;
-        let s = module.print_to_string().to_string();
-        println!("{}", s);
-        Ok(())
+        Ok(module.print_to_string().to_string())
     }
 }
