@@ -1,16 +1,17 @@
 use std::{
     cell::{Cell, RefCell},
     collections::HashSet,
+    rc::Rc,
 };
 
-use anyhow::{bail, Result};
-use refslice::refstr::RefStr;
-
+use crate::util::{RcStr, Span};
 use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
+use anyhow::{bail, Result};
 
 #[derive(Debug)]
 pub struct DeclCheck {
-    pub scope: RefCell<HashSet<RefStr>>,
+    pub scope: RefCell<HashSet<RcStr>>,
+    pub text: Rc<str>,
     pub has_error: Cell<bool>,
 }
 
@@ -21,9 +22,10 @@ pub enum ErrorType {
 }
 
 impl DeclCheck {
-    pub fn new() -> Self {
+    pub fn new(text: Rc<str>) -> Self {
         Self {
             scope: RefCell::new(HashSet::new()),
+            text,
             has_error: Cell::new(false),
         }
     }
@@ -37,13 +39,18 @@ impl DeclCheck {
 
     #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
-        if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&ast.text) {
-            self.error(ErrorType::Not, ast.text.index(..));
+        let tmp = RcStr {
+            s: Rc::clone(&self.text),
+            span: ast.span,
+        };
+
+        if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&tmp) {
+            self.error(ErrorType::Not, ast.span);
         }
         Ok(())
     }
 
-    pub fn error(&self, err: ErrorType, s: RefStr) {
+    pub fn error(&self, err: ErrorType, s: Span) {
         let tmp = if err == ErrorType::Twice {
             "twice"
         } else {
@@ -56,12 +63,16 @@ impl DeclCheck {
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
-        for i in ast.vars.iter() {
-            if self.scope.borrow().contains(i) {
-                self.error(ErrorType::Twice, i.index(..));
+        for &i in ast.vars.iter() {
+            let tmp = RcStr {
+                s: Rc::clone(&self.text),
+                span: i,
+            };
+            if self.scope.borrow().contains(&tmp) {
+                self.error(ErrorType::Twice, i);
                 bail!("Variable declared twice");
             }
-            self.scope.borrow_mut().insert(i.index(..));
+            self.scope.borrow_mut().insert(tmp);
         }
         Ok(())
     }

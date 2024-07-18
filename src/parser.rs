@@ -1,12 +1,13 @@
 use anyhow::Error;
-
+use crate::util::Span;
 use crate::*;
 
 pub struct Parser {
     pub lexer: Lexer,
     pub token: Token,
     pub has_error: bool,
-    pub text: RefStr,
+    pub text: Rc<str>,
+    pub pos: usize,
 }
 
 pub struct ParseError;
@@ -14,12 +15,13 @@ pub struct ParseError;
 type PResult<T> = Result<T, ParseError>;
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: RefStr) -> Self {
+    pub fn new(lexer: Lexer, buf: Rc<str>) -> Self {
         let mut parser = Self {
             lexer,
-            token: Token::new(TokenKind::Unknown, RefStr::new("")),
+            token: Token::new(TokenKind::Unknown, Span::empty()),
             has_error: false,
             text: buf,
+            pos: 0,
         };
         parser.advance();
         parser
@@ -64,12 +66,12 @@ impl Parser {
             if let TokenKind::KWWith = self.token.kind {
                 self.consume(TokenKind::KWWith)?;
                 self.expect(TokenKind::Ident)?;
-                vars.push(self.token.text.index(..));
+                vars.push(self.token.span);
                 self.advance();
                 while let TokenKind::Comma = self.token.kind {
                     self.consume(TokenKind::Comma)?;
                     self.expect(TokenKind::Ident)?;
-                    vars.push(self.token.text.index(..));
+                    vars.push(self.token.span);
                     self.advance();
                 }
                 self.consume(TokenKind::Colon)?;
@@ -80,8 +82,7 @@ impl Parser {
             if vars.is_empty() {
                 Ok(Ast::Expr(Box::new(e)))
             } else {
-                let buf = self.text.index(..);
-                Ok(Ast::WithDecl(Box::new(WithDecl::new(vars, buf, e))))
+                Ok(Ast::WithDecl(Box::new(WithDecl::new(vars, e))))
             }
         })()
         .map_err(|_| {
@@ -128,7 +129,7 @@ impl Parser {
                     TokenKind::Number => ValueKind::Number,
                     _ => unreachable!(),
                 };
-                let text = self.token.text.index(..);
+                let text = self.token.span;
                 let expr = Expr::Factor(Factor::new(x, text));
                 self.advance();
                 Ok(expr)

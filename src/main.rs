@@ -6,6 +6,7 @@ mod decl_check;
 mod lexer;
 mod parser;
 mod token;
+mod util;
 use crate::ast::*;
 use crate::ast_visitor::*;
 use crate::codegen::CodeGen;
@@ -18,40 +19,24 @@ use anyhow::bail;
 use anyhow::Result;
 use debug_visitor::debug_ast;
 use inkwell::context::Context;
-use refslice::refstr::RefStr;
+use std::fmt::Debug;
 use std::rc::Rc;
-
-
-// [begin, end)
-struct Span {
-    begin: usize,
-    end: usize,
-}
-
-
 
 
 fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let input = args.nth(0).expect("no input");
-    let input = input.chars().collect::<String>();
-    let input = RefStr::from(input);
-    let lexer = Lexer::new(input.index(..));
-    let mut parser = Parser::new(lexer, input.index(..));
-    let ast = parser.parse();
-    if parser.has_error {
-        bail!("parse error");
-    }
-    let Ok(ast) = ast else {
-        bail!("parse error");
-    };
+    let input: Rc<str> = input.into_boxed_str().into();
+    let lexer = Lexer::new(Rc::clone(&input));
+    let mut parser = Parser::new(lexer, Rc::clone(&input));
+    let ast = parser.parse()?;
 
-    // debug_ast(&ast);
-    let semantic = Sema;
+    debug_ast(&ast, Rc::clone(&input));
+    let semantic = Sema::new(Rc::clone(&input));
     if semantic.semantic(&ast)? {
         bail!("semantic error");
     }
     let ctx = Context::create();
-    let codegen = CodeGen::new(&ctx);
+    let codegen = CodeGen::new(&ctx, input);
     codegen.compile(ast)
 }
 
@@ -130,12 +115,18 @@ mod tests {
             Ok(s) => {
                 let s = s.trim();
                 let expected_output = expected_output.trim();
-                let s = s.split_whitespace().map(|x| x.trim()).filter(
-                    |x| !x.is_empty(),
-                ).collect::<String>().replace("\n", "");
-                let expected_output = expected_output.split_whitespace().map(|x| x.trim()).filter(
-                    |x| !x.is_empty(),
-                ).collect::<String>().replace("\n", "");
+                let s = s
+                    .split_whitespace()
+                    .map(|x| x.trim())
+                    .filter(|x| !x.is_empty())
+                    .collect::<String>()
+                    .replace("\n", "");
+                let expected_output = expected_output
+                    .split_whitespace()
+                    .map(|x| x.trim())
+                    .filter(|x| !x.is_empty())
+                    .collect::<String>()
+                    .replace("\n", "");
                 assert_eq!(s, expected_output);
             }
             Err(e) => {

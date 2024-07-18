@@ -1,5 +1,5 @@
 use crate::*;
-
+use crate::util::Span;
 use anyhow::Result;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,33 +36,31 @@ pub enum ValueKind {
 #[derive(Debug)]
 pub struct Factor {
     pub kind: ValueKind,
-    pub text: RefStr,
+    pub span: Span,
 }
 
 impl Factor {
-    pub fn new(v: ValueKind, text: RefStr) -> Factor {
-        Factor { kind: v, text }
+    pub fn new(v: ValueKind, text: Span) -> Factor {
+        Factor { kind: v, span: text }
     }
 }
 
 #[derive(Debug)]
 pub struct WithDecl {
-    pub vars: Vec<RefStr>,
-    pub text: RefStr,
+    pub vars: Vec<Span>,
     pub expr: Box<Expr>,
 }
 
 impl WithDecl {
-    pub fn new(vars: Vec<RefStr>, text: RefStr, expr: Expr) -> Self {
+    pub fn new(vars: Vec<Span>, expr: Expr) -> Self {
         WithDecl {
             vars,
-            text,
             expr: Box::new(expr),
         }
     }
 
-    pub fn vars_iter(&self) -> impl Iterator<Item = &str> {
-        self.vars.iter().map(|v| v.as_str())
+    pub fn vars_iter<'a>(&'a self, text: &'a str) -> impl Iterator<Item = &'a str> {
+        self.vars.iter().map(|v| &text[v.begin..v.end])
     }
 }
 

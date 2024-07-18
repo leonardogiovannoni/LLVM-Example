@@ -1,13 +1,15 @@
-use std::{
-    cell::{Cell, RefCell},
-    collections::HashMap,
-};
-
+use crate::util::RcStr;
+use crate::util::Span;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
     values::BasicValueEnum,
     AddressSpace,
+};
+use std::fmt::Debug;
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
 };
 
 use crate::*;
@@ -29,11 +31,12 @@ pub struct ToIRVisitor<'ctx> {
     ptr_ty: inkwell::types::PointerType<'ctx>,
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
-    name_map: RefCell<HashMap<RefStr, BasicValueEnum<'ctx>>>,
+    name_map: RefCell<HashMap<RcStr, BasicValueEnum<'ctx>>>,
+    text: Rc<str>,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>) -> Self {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, text: Rc<str>) -> Self {
         let builder = context.create_builder();
         let void_ty = context.void_type();
         let int32_ty = context.i32_type();
@@ -50,6 +53,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
             int32_zero,
             v: Cell::new(int32_zero.into()),
             name_map: Default::default(),
+            text,
         }
     }
 
@@ -77,19 +81,30 @@ impl<'ctx> ToIRVisitor<'ctx> {
         Ok(())
     }
 
+    fn text(&self, span: Span) -> &str {
+        &self.text[span.begin..span.end]
+    }
+
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = factor.text.as_str().to_owned().into_boxed_str();
-                let val = RefStr::from(Rc::from(val));
+                let val = self.text(factor.span).to_owned();
+                let span = Span {
+                    begin: 0,
+                    end: val.len(),
+                };
+                let val = RcStr {
+                    s: val.into_boxed_str().into(),
+                    span,
+                };
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
                 } else {
-                    bail!("Variable \"{}\" not found", factor.text.as_str());
+                    bail!("Variable \"{}\" not found", self.text(factor.span));
                 }
             }
             _ => {
-                let intval = factor.text.as_str().parse().expect("Invalid integer");
+                let intval = self.text(factor.span).parse().expect("Invalid integer");
                 let v = self.int32_ty.const_int(intval, true).into();
                 self.v.set(v);
             }
@@ -129,13 +144,13 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .module
             .add_function("calc_read", read_ftype, Some(Linkage::External));
 
-        for var in with_decl.vars.iter() {
-            let str_val = self.context.const_string(var.as_str().as_bytes(), true);
+        for &var in with_decl.vars.iter() {
+            let str_val = self.context.const_string(self.text(var).as_bytes(), true);
 
             let global_str = self.module.add_global(
                 str_val.get_type(),
                 Some(AddressSpace::default()),
-                &format!("{}.str", var.as_str()),
+                &format!("{}.str", self.text(var)),
             );
 
             global_str.set_initializer(&str_val);
@@ -150,7 +165,11 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .try_as_basic_value()
                 .left()
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
-            self.name_map.borrow_mut().insert(var.index(..), left);
+            let rc_str = RcStr {
+                s: Rc::clone(&self.text),
+                span: var,
+            };
+            self.name_map.borrow_mut().insert(rc_str, left);
         }
         with_decl.expr.accept(self)?;
         Ok(())

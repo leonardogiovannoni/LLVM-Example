@@ -9,7 +9,6 @@ edition = "2021"
 anyhow = "1.0.79"
 fxhash = "0.2.1"
 inkwell = { version = "0.4.0", features = ["llvm17-0"] }
-refslice = { path = "refslice" }
 
 
 
@@ -17,6 +16,3 @@ refslice = { path = "refslice" }
 # [profile.release]
 #lto = true
 #codegen-units = 1
-
-
-

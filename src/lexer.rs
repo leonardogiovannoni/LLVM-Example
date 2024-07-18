@@ -1,43 +1,57 @@
 use crate::*;
-use refslice::refstr::RefStr;
+use crate::util::Span;
 
 pub struct Lexer {
-    pub text: RefStr,
+    pub span: Span,
+    pub text: Rc<str>,
 }
 impl Lexer {
-    pub fn new(input: RefStr) -> Self {
-        Lexer { text: input }
+    pub fn new(input: Rc<str>) -> Self {
+        Lexer {
+            span: Span {
+                begin: 0,
+                end: input.len(),
+            },
+            text: input,
+        }
     }
 
     pub fn form_token(&mut self, token: &mut Token, tok_end: usize, kind: TokenKind) {
         token.kind = kind;
-        token.text = self.text.index(..tok_end);
-        self.text = self.text.index(tok_end..);
+        token.span = Span {
+            begin: self.span.begin,
+            end: self.span.begin + tok_end,
+        };
+        self.span.begin += tok_end;
+    }
+
+    fn text(&self) -> &str {
+        &self.text[self.span.begin..self.span.end]
     }
 
     pub fn next(&mut self, token: &mut Token) {
-        let i = self
-            .text
-            .iter()
+        let i: usize = self
+            .text()
+            .chars()
             .take_while(|x| x.is_whitespace())
             .map(|x| x.len_utf8())
             .sum();
-        self.text = self.text.index(i..);
-        let first = self.text.first();
+        self.span.begin += i;
+        let first = self.text().chars().next();
         let Some(c) = first else {
             token.kind = TokenKind::Eoi;
-            token.text = self.text.index(..0);
+            token.span = Span::empty();
             return;
         };
         match c {
             x if x.is_alphabetic() => {
                 let i = self
-                    .text
-                    .iter()
+                    .text()
+                    .chars()
                     .take_while(|x| x.is_alphabetic())
                     .map(|x| x.len_utf8())
                     .sum();
-                let name = self.text.index(..i);
+                let name = self.text()[..i].to_string();
                 let kind = match name.as_str() {
                     "with" => TokenKind::KWWith,
                     _ => TokenKind::Ident,
@@ -45,7 +59,12 @@ impl Lexer {
                 self.form_token(token, i, kind)
             }
             x if x.is_ascii_digit() => {
-                let i = self.text.iter().take_while(|x| x.is_ascii_digit()).count();
+                let i = self
+                    .text()
+                    .chars()
+                    .take_while(|x| x.is_ascii_digit())
+                    .map(|x| x.len_utf8())
+                    .sum();
                 self.form_token(token, i, TokenKind::Number)
             }
             '+' => self.form_token(token, 1, TokenKind::Plus),

@@ -2,12 +2,14 @@ use crate::*;
 use anyhow::Result;
 struct DebugAstVisitor<'a> {
     phantom: std::marker::PhantomData<&'a ()>,
+    text: Rc<str>,
 }
 
 impl<'a> DebugAstVisitor<'a> {
-    fn new() -> DebugAstVisitor<'a> {
+    fn new(text: Rc<str>) -> DebugAstVisitor<'a> {
         DebugAstVisitor {
             phantom: std::marker::PhantomData,
+            text,
         }
     }
 
@@ -20,7 +22,7 @@ impl<'a> DebugAstVisitor<'a> {
 
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         let kind = format!("{:?}", factor.kind);
-        println!("Factor(kind: {}, val: {})", kind, factor.text.as_str());
+        println!("Factor(kind: {}, val: {:?})", kind, factor.span);
         Ok(())
     }
 
@@ -34,7 +36,7 @@ impl<'a> DebugAstVisitor<'a> {
             }
             Expr::Factor(factor) => {
                 let kind = format!("{:?}", factor.kind);
-                format!("Factor(kind: {}, val: {})", kind, factor.text.as_str())
+                format!("Factor(kind: {}, val: {:?})", kind, factor.span)
             }
         }
     }
@@ -43,7 +45,7 @@ impl<'a> DebugAstVisitor<'a> {
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     fn visit_with_decl(&self, with_decl: &WithDecl) -> Result<()> {
         let vars = with_decl
-            .vars_iter()
+            .vars_iter(&*self.text)
             .map(|v| v.to_owned())
             .collect::<Vec<_>>();
 
@@ -69,7 +71,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     }
 }
 
-pub fn debug_ast(ast: &Ast) {
-    let visitor = DebugAstVisitor::new();
+pub fn debug_ast(ast: &Ast, text: Rc<str>) {
+    let visitor = DebugAstVisitor::new(text);
     visitor.visit(ast).unwrap();
 }

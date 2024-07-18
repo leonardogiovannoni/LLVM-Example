@@ -1,4 +1,4 @@
-use refslice::refstr::RefStr;
+use crate::util::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 
@@ -21,12 +21,12 @@ pub enum TokenKind {
 #[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
-    pub text: RefStr,
+    pub span: Span,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, text: RefStr) -> Self {
-        Token { kind, text }
+    pub fn new(kind: TokenKind, text: Span) -> Self {
+        Token { kind, span: text }
     }
 
     pub fn is_one_of(&self, ks: &[TokenKind]) -> bool {
