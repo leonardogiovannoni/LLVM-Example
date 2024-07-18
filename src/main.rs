@@ -27,7 +27,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let input = args.nth(0).expect("no input");
     let input: Rc<str> = input.into_boxed_str().into();
     let lexer = Lexer::new(Rc::clone(&input));
-    let mut parser = Parser::new(lexer, Rc::clone(&input));
+    let mut parser = Parser::new(lexer);
     let ast = parser.parse()?;
 
     debug_ast(&ast, Rc::clone(&input));

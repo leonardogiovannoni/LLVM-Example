@@ -51,8 +51,7 @@ impl Lexer {
                     .take_while(|x| x.is_alphabetic())
                     .map(|x| x.len_utf8())
                     .sum();
-                let name = self.text()[..i].to_string();
-                let kind = match name.as_str() {
+                let kind = match &self.text()[..i] {
                     "with" => TokenKind::KWWith,
                     _ => TokenKind::Ident,
                 };

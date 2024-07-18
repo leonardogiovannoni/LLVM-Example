@@ -6,8 +6,6 @@ pub struct Parser {
     pub lexer: Lexer,
     pub token: Token,
     pub has_error: bool,
-    pub text: Rc<str>,
-    pub pos: usize,
 }
 
 pub struct ParseError;
@@ -15,13 +13,11 @@ pub struct ParseError;
 type PResult<T> = Result<T, ParseError>;
 
 impl Parser {
-    pub fn new(lexer: Lexer, buf: Rc<str>) -> Self {
+    pub fn new(lexer: Lexer) -> Self {
         let mut parser = Self {
             lexer,
             token: Token::new(TokenKind::Unknown, Span::empty()),
             has_error: false,
-            text: buf,
-            pos: 0,
         };
         parser.advance();
         parser
