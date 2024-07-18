@@ -1,5 +1,6 @@
 use crate::*;
 use anyhow::Result;
+use util::Span;
 struct DebugAstVisitor<'a> {
     phantom: std::marker::PhantomData<&'a ()>,
     text: Rc<str>,
@@ -13,6 +14,10 @@ impl<'a> DebugAstVisitor<'a> {
         }
     }
 
+    fn text(&self, span: Span) -> &str {
+        &self.text[span.begin..span.end]
+    }
+
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let [lhs, rhs] = [&bin_op.lhs_expr, &bin_op.rhs_expr].map(|expr| self.format_expr(expr));
         let op = format!("{:?}", bin_op.op);
@@ -22,7 +27,7 @@ impl<'a> DebugAstVisitor<'a> {
 
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         let kind = format!("{:?}", factor.kind);
-        println!("Factor(kind: {}, val: {:?})", kind, factor.span);
+        println!("Factor(kind: {}, val: {:?})", kind, self.text(factor.span));
         Ok(())
     }
 
@@ -36,7 +41,7 @@ impl<'a> DebugAstVisitor<'a> {
             }
             Expr::Factor(factor) => {
                 let kind = format!("{:?}", factor.kind);
-                format!("Factor(kind: {}, val: {:?})", kind, factor.span)
+                format!("Factor(kind: {}, val: {:?})", kind, self.text(factor.span))
             }
         }
     }
