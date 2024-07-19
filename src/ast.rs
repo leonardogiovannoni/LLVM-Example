@@ -1,5 +1,5 @@
-use crate::*;
 use crate::util::Span;
+use crate::*;
 use anyhow::Result;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,7 +41,10 @@ pub struct Factor {
 
 impl Factor {
     pub fn new(v: ValueKind, text: Span) -> Factor {
-        Factor { kind: v, span: text }
+        Factor {
+            kind: v,
+            span: text,
+        }
     }
 }
 

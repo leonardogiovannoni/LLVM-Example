@@ -1,5 +1,5 @@
-use crate::*;
 use crate::util::Span;
+use crate::*;
 
 pub struct Lexer {
     pub span: Span,

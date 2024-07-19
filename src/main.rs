@@ -22,7 +22,6 @@ use inkwell::context::Context;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-
 fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let input = args.nth(0).expect("no input");
     let input: Rc<str> = input.into_boxed_str().into();

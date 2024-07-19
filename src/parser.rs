@@ -1,6 +1,6 @@
-use anyhow::Error;
 use crate::util::Span;
 use crate::*;
+use anyhow::Error;
 
 pub struct Parser {
     pub lexer: Lexer,

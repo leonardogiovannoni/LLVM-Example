@@ -1,6 +1,10 @@
-
-use std::{fmt::{Debug, Formatter}, ops::Deref, rc::Rc};
 use std::hash::{Hash, Hasher};
+use std::{
+    fmt::{Debug, Formatter},
+    ops::Deref,
+    rc::Rc,
+};
+
 // [begin, end)
 #[derive(Clone, Copy)]
 pub struct Span {
@@ -19,8 +23,6 @@ impl Span {
         Span { begin: 0, end: 0 }
     }
 }
-
-
 
 pub struct RcStr {
     pub s: Rc<str>,
