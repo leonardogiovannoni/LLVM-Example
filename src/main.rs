@@ -17,7 +17,7 @@ use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
-use debug_visitor::debug_ast;
+// use debug_visitor::debug_ast;
 use inkwell::context::Context;
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -30,7 +30,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let mut parser = Parser::new(lexer);
     let ast = parser.parse()?;
 
-    debug_ast(&ast, Rc::clone(&input));
+    //debug_ast(&ast, Rc::clone(&input));
     let semantic = Sema::new(Rc::clone(&input));
     if semantic.semantic(&ast)? {
         bail!("semantic error");

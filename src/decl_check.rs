@@ -39,11 +39,7 @@ impl DeclCheck {
 
     #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
-        let tmp = RcStr {
-            string: Rc::clone(&self.text),
-            span: ast.span,
-        };
-
+        let tmp = RcStr::new(Rc::clone(&self.text), ast.span);
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&tmp) {
             self.error(ErrorType::Not, ast.span);
         }
@@ -63,13 +59,10 @@ impl DeclCheck {
 
 impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
-        for &i in ast.vars.iter() {
-            let tmp = RcStr {
-                string: Rc::clone(&self.text),
-                span: i,
-            };
+        for &span in ast.vars.iter() {
+            let tmp = RcStr::new(Rc::clone(&self.text), span);
             if self.scope.borrow().contains(&tmp) {
-                self.error(ErrorType::Twice, i);
+                self.error(ErrorType::Twice, span);
                 bail!("Variable declared twice");
             }
             self.scope.borrow_mut().insert(tmp);

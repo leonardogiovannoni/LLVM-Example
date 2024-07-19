@@ -59,11 +59,11 @@ impl Hash for RcStr {
 }
 
 impl RcStr {
-    fn new(s: Rc<str>, span: Span) -> Self {
+    pub fn new(s: Rc<str>, span: Span) -> Self {
         Self { string: s, span }
     }
 
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.string[self.span.begin..self.span.end]
     }
 }

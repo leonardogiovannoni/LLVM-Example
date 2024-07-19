@@ -93,10 +93,8 @@ impl<'ctx> ToIRVisitor<'ctx> {
                     begin: 0,
                     end: val.len(),
                 };
-                let val = RcStr {
-                    string: val.into_boxed_str().into(),
-                    span,
-                };
+
+                let val = RcStr::new(val.into_boxed_str().into(), span);
                 if let Some(&val) = self.name_map.borrow().get(&val) {
                     self.v.set(val);
                 } else {
@@ -165,10 +163,7 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .try_as_basic_value()
                 .left()
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
-            let rc_str = RcStr {
-                string: Rc::clone(&self.text),
-                span: var,
-            };
+            let rc_str = RcStr::new(Rc::clone(&self.text), var);
             self.name_map.borrow_mut().insert(rc_str, left);
         }
         with_decl.expr.accept(self)?;
