@@ -40,7 +40,7 @@ impl DeclCheck {
     #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
         let tmp = RcStr {
-            s: Rc::clone(&self.text),
+            string: Rc::clone(&self.text),
             span: ast.span,
         };
 
@@ -65,7 +65,7 @@ impl<'a> AstVisitorTrait<'a> for DeclCheck {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
         for &i in ast.vars.iter() {
             let tmp = RcStr {
-                s: Rc::clone(&self.text),
+                string: Rc::clone(&self.text),
                 span: i,
             };
             if self.scope.borrow().contains(&tmp) {

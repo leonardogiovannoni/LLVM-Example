@@ -16,20 +16,20 @@ impl Lexer {
         }
     }
 
-    pub fn form_token(&mut self, token: &mut Token, tok_end: usize, kind: TokenKind) {
-        token.kind = kind;
-        token.span = Span {
+    pub fn form_token(&mut self, tok_end: usize, kind: TokenKind) -> Token {
+        let token = Token::new(kind,  Span {
             begin: self.span.begin,
             end: self.span.begin + tok_end,
-        };
+        });
         self.span.begin += tok_end;
+        token
     }
 
     fn text(&self) -> &str {
         &self.text[self.span.begin..self.span.end]
     }
 
-    pub fn next(&mut self, token: &mut Token) {
+    pub fn next(&mut self) -> Token {
         let i: usize = self
             .text()
             .chars()
@@ -37,11 +37,8 @@ impl Lexer {
             .map(|x| x.len_utf8())
             .sum();
         self.span.begin += i;
-        let first = self.text().chars().next();
-        let Some(c) = first else {
-            token.kind = TokenKind::Eoi;
-            token.span = Span::empty();
-            return;
+        let Some(c) = self.text().chars().next() else {
+            return Token::new(TokenKind::Eoi, Span::empty());
         };
         match c {
             x if x.is_alphabetic() => {
@@ -55,7 +52,7 @@ impl Lexer {
                     "with" => TokenKind::KWWith,
                     _ => TokenKind::Ident,
                 };
-                self.form_token(token, i, kind)
+                self.form_token(i, kind)
             }
             x if x.is_ascii_digit() => {
                 let i = self
@@ -64,17 +61,17 @@ impl Lexer {
                     .take_while(|x| x.is_ascii_digit())
                     .map(|x| x.len_utf8())
                     .sum();
-                self.form_token(token, i, TokenKind::Number)
+                self.form_token(i, TokenKind::Number)
             }
-            '+' => self.form_token(token, 1, TokenKind::Plus),
-            '-' => self.form_token(token, 1, TokenKind::Minus),
-            '*' => self.form_token(token, 1, TokenKind::Star),
-            '/' => self.form_token(token, 1, TokenKind::Slash),
-            '(' => self.form_token(token, 1, TokenKind::LParen),
-            ')' => self.form_token(token, 1, TokenKind::RParen),
-            ':' => self.form_token(token, 1, TokenKind::Colon),
-            ',' => self.form_token(token, 1, TokenKind::Comma),
-            _ => self.form_token(token, 1, TokenKind::Unknown),
+            '+' => self.form_token(c.len_utf8(), TokenKind::Plus),
+            '-' => self.form_token(c.len_utf8(), TokenKind::Minus),
+            '*' => self.form_token(c.len_utf8(), TokenKind::Star),
+            '/' => self.form_token(c.len_utf8(), TokenKind::Slash),
+            '(' => self.form_token(c.len_utf8(), TokenKind::LParen),
+            ')' => self.form_token(c.len_utf8(), TokenKind::RParen),
+            ':' => self.form_token(c.len_utf8(), TokenKind::Colon),
+            ',' => self.form_token(c.len_utf8(), TokenKind::Comma),
+            _ => self.form_token(c.len_utf8(), TokenKind::Unknown),
         }
     }
 }

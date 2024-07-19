@@ -5,7 +5,8 @@ use std::{
     rc::Rc,
 };
 
-// [begin, end)
+/// span in the form of  [begin, end)
+/// represents the *bytes* range of a string
 #[derive(Clone, Copy)]
 pub struct Span {
     pub begin: usize,
@@ -25,7 +26,7 @@ impl Span {
 }
 
 pub struct RcStr {
-    pub s: Rc<str>,
+    pub string: Rc<str>,
     pub span: Span,
 }
 
@@ -59,10 +60,10 @@ impl Hash for RcStr {
 
 impl RcStr {
     fn new(s: Rc<str>, span: Span) -> Self {
-        Self { s, span }
+        Self { string: s, span }
     }
 
     fn as_str(&self) -> &str {
-        &self.s[self.span.begin..self.span.end]
+        &self.string[self.span.begin..self.span.end]
     }
 }

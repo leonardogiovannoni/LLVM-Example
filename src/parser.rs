@@ -28,7 +28,7 @@ impl Parser {
     }
 
     pub fn advance(&mut self) {
-        self.lexer.next(&mut self.token);
+        self.token = self.lexer.next();
     }
 
     pub fn expect(&mut self, kind: TokenKind) -> PResult<()> {
