@@ -2,16 +2,14 @@ use crate::util::Span;
 use crate::*;
 
 pub struct Lexer<'a> {
-    pub span: Span,
+    pub pos: usize,
     pub text: &'a str,
 }
+
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Lexer {
-            span: Span {
-                begin: 0,
-                end: input.len(),
-            },
+            pos: 0,
             text: input,
         }
     }
@@ -20,16 +18,16 @@ impl<'a> Lexer<'a> {
         let token = Token::new(
             kind,
             Span {
-                begin: self.span.begin,
-                end: self.span.begin + tok_end,
+                begin: self.pos,
+                end: self.pos + tok_end,
             },
         );
-        self.span.begin += tok_end;
+        self.pos += tok_end;
         token
     }
 
     fn text(&self) -> &str {
-        &self.text[self.span.begin..self.span.end]
+        &self.text[self.pos..]
     }
 
     pub fn next(&mut self) -> Token {
@@ -39,7 +37,7 @@ impl<'a> Lexer<'a> {
             .take_while(|x| x.is_whitespace())
             .map(|x| x.len_utf8())
             .sum();
-        self.span.begin += i;
+        self.pos += i;
         let Some(c) = self.text().chars().next() else {
             return Token::new(TokenKind::Eoi, Span::empty());
         };
