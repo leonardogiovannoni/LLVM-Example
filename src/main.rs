@@ -17,26 +17,24 @@ use crate::parser::*;
 use crate::token::*;
 use anyhow::bail;
 use anyhow::Result;
-// use debug_visitor::debug_ast;
+use debug_visitor::debug_ast;
 use inkwell::context::Context;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-
 fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let input = args.nth(0).expect("no input");
-    let input: Rc<str> = input.into_boxed_str().into();
-    let lexer = Lexer::new(Rc::clone(&input));
+    let lexer = Lexer::new(&input);
     let mut parser = Parser::new(lexer);
     let ast = parser.parse()?;
 
-    //debug_ast(&ast, Rc::clone(&input));
-    let semantic = Sema::new(Rc::clone(&input));
+    debug_ast(&ast, &input);
+    let semantic = Sema::new(&input);
     if semantic.semantic(&ast)? {
         bail!("semantic error");
     }
     let ctx = Context::create();
-    let codegen = CodeGen::new(&ctx, input);
+    let codegen = CodeGen::new(&ctx, &input);
     codegen.compile(ast)
 }
 

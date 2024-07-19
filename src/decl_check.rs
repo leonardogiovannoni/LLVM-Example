@@ -1,17 +1,17 @@
 use std::{
     cell::{Cell, RefCell},
     collections::HashSet,
-    rc::Rc,
 };
 
-use crate::util::{RcStr, Span};
+use crate::util::Span;
 use crate::{Ast, AstTrait, AstVisitorTrait, BinaryOp, Expr, Factor, ValueKind, WithDecl};
 use anyhow::{bail, Result};
 
 #[derive(Debug)]
-pub struct DeclCheck {
-    pub scope: RefCell<HashSet<RcStr>>,
-    pub text: Rc<str>,
+pub struct DeclCheck<'a> {
+    //pub scope: RefCell<HashSet<RcStr>>,
+    pub scope: RefCell<HashSet<&'a str>>,
+    pub text: &'a str,
     pub has_error: Cell<bool>,
 }
 
@@ -21,8 +21,8 @@ pub enum ErrorType {
     Not,
 }
 
-impl DeclCheck {
-    pub fn new(text: Rc<str>) -> Self {
+impl<'a> DeclCheck<'a> {
+    pub fn new(text: &'a str) -> Self {
         Self {
             scope: RefCell::new(HashSet::new()),
             text,
@@ -39,7 +39,8 @@ impl DeclCheck {
 
     #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
-        let tmp = RcStr::new(Rc::clone(&self.text), ast.span);
+        //let tmp = RcStr::new(Rc::clone(&self.text), ast.span);
+        let tmp = &self.text[ast.span.begin..ast.span.end];
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&tmp) {
             self.error(ErrorType::Not, ast.span);
         }
@@ -57,10 +58,11 @@ impl DeclCheck {
     }
 }
 
-impl<'a> AstVisitorTrait<'a> for DeclCheck {
+impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
         for &span in ast.vars.iter() {
-            let tmp = RcStr::new(Rc::clone(&self.text), span);
+            //let tmp = RcStr::new(Rc::clone(&self.text), span);
+            let tmp = &self.text[span.begin..span.end];
             if self.scope.borrow().contains(&tmp) {
                 self.error(ErrorType::Twice, span);
                 bail!("Variable declared twice");

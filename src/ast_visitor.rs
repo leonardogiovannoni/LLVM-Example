@@ -1,4 +1,3 @@
-use crate::util::RcStr;
 use crate::util::Span;
 use inkwell::{
     builder::Builder,
@@ -31,12 +30,12 @@ pub struct ToIRVisitor<'ctx> {
     ptr_ty: inkwell::types::PointerType<'ctx>,
     int32_zero: inkwell::values::IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
-    name_map: RefCell<HashMap<RcStr, BasicValueEnum<'ctx>>>,
-    text: Rc<str>,
+    name_map: RefCell<HashMap<&'ctx str, BasicValueEnum<'ctx>>>,
+    text: &'ctx str,
 }
 
 impl<'ctx> ToIRVisitor<'ctx> {
-    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, text: Rc<str>) -> Self {
+    pub fn new(context: &'ctx Context, module: Rc<Module<'ctx>>, text: &'ctx str) -> Self {
         let builder = context.create_builder();
         let void_ty = context.void_type();
         let int32_ty = context.i32_type();
@@ -89,13 +88,7 @@ impl<'ctx> ToIRVisitor<'ctx> {
         match factor.kind {
             ValueKind::Ident => {
                 let val = self.text(factor.span).to_owned();
-                let span = Span {
-                    begin: 0,
-                    end: val.len(),
-                };
-
-                let val = RcStr::new(val.into_boxed_str().into(), span);
-                if let Some(&val) = self.name_map.borrow().get(&val) {
+                if let Some(&val) = self.name_map.borrow().get(val.as_str()) {
                     self.v.set(val);
                 } else {
                     bail!("Variable \"{}\" not found", self.text(factor.span));
@@ -163,8 +156,10 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .try_as_basic_value()
                 .left()
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
-            let rc_str = RcStr::new(Rc::clone(&self.text), var);
-            self.name_map.borrow_mut().insert(rc_str, left);
+            //let text: Rc<str> = self.text.to_string().into_boxed_str().into();
+            //let rc_str = RcStr::new(text, var);
+            let s = &self.text[var.begin..var.end];
+            self.name_map.borrow_mut().insert(s, left);
         }
         with_decl.expr.accept(self)?;
         Ok(())

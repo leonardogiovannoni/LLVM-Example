@@ -2,16 +2,12 @@ use crate::*;
 use anyhow::Result;
 use util::Span;
 struct DebugAstVisitor<'a> {
-    phantom: std::marker::PhantomData<&'a ()>,
-    text: Rc<str>,
+    text: &'a str,
 }
 
 impl<'a> DebugAstVisitor<'a> {
-    fn new(text: Rc<str>) -> DebugAstVisitor<'a> {
-        DebugAstVisitor {
-            phantom: std::marker::PhantomData,
-            text,
-        }
+    fn new(text: &'a str) -> DebugAstVisitor<'a> {
+        DebugAstVisitor { text }
     }
 
     fn text(&self, span: Span) -> &str {
@@ -76,7 +72,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     }
 }
 
-pub fn debug_ast(ast: &Ast, text: Rc<str>) {
+pub fn debug_ast<'a>(ast: &Ast, text: &'a str) {
     let visitor = DebugAstVisitor::new(text);
     visitor.visit(ast).unwrap();
 }

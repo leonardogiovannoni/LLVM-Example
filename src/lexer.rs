@@ -1,12 +1,12 @@
 use crate::util::Span;
 use crate::*;
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     pub span: Span,
-    pub text: Rc<str>,
+    pub text: &'a str,
 }
-impl Lexer {
-    pub fn new(input: Rc<str>) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
         Lexer {
             span: Span {
                 begin: 0,
@@ -17,10 +17,13 @@ impl Lexer {
     }
 
     pub fn form_token(&mut self, tok_end: usize, kind: TokenKind) -> Token {
-        let token = Token::new(kind,  Span {
-            begin: self.span.begin,
-            end: self.span.begin + tok_end,
-        });
+        let token = Token::new(
+            kind,
+            Span {
+                begin: self.span.begin,
+                end: self.span.begin + tok_end,
+            },
+        );
         self.span.begin += tok_end;
         token
     }

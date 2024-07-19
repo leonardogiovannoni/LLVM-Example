@@ -2,8 +2,8 @@ use crate::util::Span;
 use crate::*;
 use anyhow::Error;
 
-pub struct Parser {
-    pub lexer: Lexer,
+pub struct Parser<'a> {
+    pub lexer: Lexer<'a>,
     pub token: Token,
     pub has_error: bool,
 }
@@ -12,8 +12,8 @@ pub struct ParseError;
 
 type PResult<T> = Result<T, ParseError>;
 
-impl Parser {
-    pub fn new(lexer: Lexer) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(lexer: Lexer<'a>) -> Self {
         let mut parser = Self {
             lexer,
             token: Token::new(TokenKind::Unknown, Span::empty()),
