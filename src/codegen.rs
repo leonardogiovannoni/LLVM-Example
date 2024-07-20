@@ -13,10 +13,14 @@ impl<'a> Sema<'a> {
     pub fn new(text: &'a str) -> Self {
         Sema { text }
     }
-    pub fn semantic(&self, ast: &Ast) -> Result<bool> {
+    pub fn semantic(&self, ast: &Ast) -> Result<()> {
         let check = DeclCheck::new(self.text);
         ast.accept(&check)?;
-        Ok(check.has_error.get())
+        if check.has_error.get() {
+            Err(anyhow::anyhow!("Declaration error"))
+        } else {
+            Ok(())
+        }
     }
 }
 

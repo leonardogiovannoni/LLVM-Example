@@ -28,8 +28,4 @@ impl Token {
     pub fn new(kind: TokenKind, text: Span) -> Self {
         Token { kind, span: text }
     }
-
-    pub fn is_one_of(&self, ks: &[TokenKind]) -> bool {
-        ks.contains(&self.kind)
-    }
 }

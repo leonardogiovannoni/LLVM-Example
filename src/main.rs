@@ -30,9 +30,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
 
     debug_ast(&ast, &input);
     let semantic = Sema::new(&input);
-    if semantic.semantic(&ast)? {
-        bail!("semantic error");
-    }
+    semantic.semantic(&ast)?;
     let ctx = Context::create();
     let codegen = CodeGen::new(&ctx, &input);
     codegen.compile(ast)
