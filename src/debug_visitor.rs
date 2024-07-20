@@ -1,6 +1,6 @@
 use crate::*;
 use anyhow::Result;
-use util::Span;
+
 struct DebugAstVisitor<'a> {
     text: &'a str,
 }
@@ -66,7 +66,7 @@ impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     }
 }
 
-pub fn debug_ast<'a>(ast: &Ast, text: &'a str) {
+pub fn debug_ast(ast: &Ast, text: &str) {
     let visitor = DebugAstVisitor::new(text);
     visitor.visit(ast).unwrap();
 }

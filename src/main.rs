@@ -23,7 +23,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
-    let input = args.nth(0).expect("no input");
+    let input = args.next().expect("no input");
     let lexer = Lexer::new(&input);
     let mut parser = Parser::new(lexer);
     let ast = parser.parse()?;
