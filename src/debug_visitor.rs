@@ -10,10 +10,6 @@ impl<'a> DebugAstVisitor<'a> {
         DebugAstVisitor { text }
     }
 
-    fn text(&self, span: Span) -> &str {
-        &self.text[span.begin..span.end]
-    }
-
     fn visit_binary_op(&self, bin_op: &BinaryOp) -> Result<()> {
         let [lhs, rhs] = [&bin_op.lhs_expr, &bin_op.rhs_expr].map(|expr| self.format_expr(expr));
         let op = format!("{:?}", bin_op.op);
@@ -23,7 +19,8 @@ impl<'a> DebugAstVisitor<'a> {
 
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         let kind = format!("{:?}", factor.kind);
-        println!("Factor(kind: {}, val: {:?})", kind, self.text(factor.span));
+        let range = factor.span.begin..factor.span.end;
+        println!("Factor(kind: {}, val: {:?})", kind, &self.text[range]);
         Ok(())
     }
 
@@ -37,7 +34,8 @@ impl<'a> DebugAstVisitor<'a> {
             }
             Expr::Factor(factor) => {
                 let kind = format!("{:?}", factor.kind);
-                format!("Factor(kind: {}, val: {:?})", kind, self.text(factor.span))
+                let range = factor.span.begin..factor.span.end;
+                format!("Factor(kind: {}, val: {:?})", kind, &self.text[range])
             }
         }
     }
@@ -45,13 +43,9 @@ impl<'a> DebugAstVisitor<'a> {
 
 impl<'a> AstVisitorTrait<'a> for DebugAstVisitor<'a> {
     fn visit_with_decl(&self, with_decl: &WithDecl) -> Result<()> {
-        let vars = with_decl
-            .vars_iter(&*self.text)
-            .map(|v| v.to_owned())
-            .collect::<Vec<_>>();
+        let vars = with_decl.vars_iter(self.text).collect::<Vec<_>>();
 
-        let tmp = &with_decl.expr;
-        let expr = self.format_expr(tmp);
+        let expr = self.format_expr(&with_decl.expr);
         let vars = format!("{:?}", vars);
         println!("WithDecl(vars: {}, expr: {})", vars, expr);
         Ok(())

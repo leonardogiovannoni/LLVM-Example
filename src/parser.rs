@@ -66,7 +66,8 @@ impl<'a> Parser<'a> {
                 vars.push(self.token.span);
                 self.advance();
                 while let TokenKind::Comma = self.token.kind {
-                    self.consume(TokenKind::Comma).expect("token kind is not comma");
+                    self.consume(TokenKind::Comma)
+                        .expect("token kind is not comma");
                     self.expect(TokenKind::Ident)?;
                     vars.push(self.token.span);
                     self.advance();

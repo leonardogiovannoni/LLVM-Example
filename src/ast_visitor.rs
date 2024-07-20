@@ -1,4 +1,3 @@
-use crate::util::Span;
 use crate::*;
 use inkwell::{
     builder::Builder,
@@ -82,22 +81,20 @@ impl<'ctx> ToIRVisitor<'ctx> {
         Ok(())
     }
 
-    fn text(&self, span: Span) -> &str {
-        &self.text[span.begin..span.end]
-    }
-
     fn visit_factor(&self, factor: &Factor) -> Result<()> {
         match factor.kind {
             ValueKind::Ident => {
-                let val = self.text(factor.span).to_owned();
-                if let Some(&val) = self.name_map.borrow().get(val.as_str()) {
+                let range = factor.span.begin..factor.span.end;
+                let val = &self.text[range];
+                if let Some(&val) = self.name_map.borrow().get(val) {
                     self.v.set(val);
                 } else {
-                    bail!("Variable \"{}\" not found", self.text(factor.span));
+                    bail!("Variable \"{}\" not found", val);
                 }
             }
             _ => {
-                let intval = self.text(factor.span).parse().expect("Invalid integer");
+                let range = factor.span.begin..factor.span.end;
+                let intval = self.text[range].parse().expect("Invalid integer");
                 let v = self.int32_ty.const_int(intval, true).into();
                 self.v.set(v);
             }
@@ -138,12 +135,14 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
             .add_function("calc_read", read_ftype, Some(Linkage::External));
 
         for &var in with_decl.vars.iter() {
-            let str_val = self.context.const_string(self.text(var).as_bytes(), true);
+            let range = var.begin..var.end;
+            let s = &self.text[range];
+            let str_val = self.context.const_string(s.as_bytes(), true);
 
             let global_str = self.module.add_global(
                 str_val.get_type(),
                 Some(AddressSpace::default()),
-                &format!("{}.str", self.text(var)),
+                &format!("{}.str", s),
             );
 
             global_str.set_initializer(&str_val);

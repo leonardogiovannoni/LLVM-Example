@@ -39,7 +39,6 @@ impl<'a> DeclCheck<'a> {
 
     #[inline(always)]
     fn visit_factor(&self, ast: &Factor) -> Result<()> {
-        //let tmp = RcStr::new(Rc::clone(&self.text), ast.span);
         let tmp = &self.text[ast.span.begin..ast.span.end];
         if ast.kind == ValueKind::Ident && !self.scope.borrow().contains(&tmp) {
             self.error(ErrorType::Not, ast.span);
@@ -61,7 +60,6 @@ impl<'a> DeclCheck<'a> {
 impl<'a> AstVisitorTrait<'a> for DeclCheck<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()> {
         for &span in ast.vars.iter() {
-            //let tmp = RcStr::new(Rc::clone(&self.text), span);
             let tmp = &self.text[span.begin..span.end];
             if self.scope.borrow().contains(&tmp) {
                 self.error(ErrorType::Twice, span);
