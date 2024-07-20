@@ -1,17 +1,19 @@
 use crate::util::Span;
+use crate::*;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
-    values::BasicValueEnum,
+    types::{IntType, PointerType, VoidType},
+    values::{BasicValueEnum, IntValue},
     AddressSpace,
 };
-use std::fmt::Debug;
+
 use std::{
     cell::{Cell, RefCell},
     collections::HashMap,
+    fmt::Debug,
 };
 
-use crate::*;
 use anyhow::Result;
 
 pub trait AstVisitorTrait<'a> {
@@ -25,10 +27,10 @@ pub struct ToIRVisitor<'ctx> {
     context: &'ctx Context,
     module: Rc<Module<'ctx>>,
     builder: Builder<'ctx>,
-    void_ty: inkwell::types::VoidType<'ctx>,
-    int32_ty: inkwell::types::IntType<'ctx>,
-    ptr_ty: inkwell::types::PointerType<'ctx>,
-    int32_zero: inkwell::values::IntValue<'ctx>,
+    void_ty: VoidType<'ctx>,
+    int32_ty: IntType<'ctx>,
+    ptr_ty: PointerType<'ctx>,
+    int32_zero: IntValue<'ctx>,
     v: Cell<BasicValueEnum<'ctx>>,
     name_map: RefCell<HashMap<&'ctx str, BasicValueEnum<'ctx>>>,
     text: &'ctx str,
@@ -156,8 +158,6 @@ impl<'a> AstVisitorTrait<'a> for ToIRVisitor<'a> {
                 .try_as_basic_value()
                 .left()
                 .ok_or(anyhow::anyhow!("not a basic value"))?;
-            //let text: Rc<str> = self.text.to_string().into_boxed_str().into();
-            //let rc_str = RcStr::new(text, var);
             let s = &self.text[var.begin..var.end];
             self.name_map.borrow_mut().insert(s, left);
         }
