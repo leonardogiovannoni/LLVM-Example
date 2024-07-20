@@ -27,7 +27,6 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let lexer = Lexer::new(&input);
     let mut parser = Parser::new(lexer);
     let ast = parser.parse()?;
-
     debug_ast(&ast, &input);
     let semantic = Sema::new(&input);
     semantic.semantic(&ast)?;
