@@ -14,65 +14,64 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn form_token(&mut self, tok_end: usize, kind: TokenKind) -> Token {
-        let token = Token::new(
-            kind,
-            Span {
-                begin: self.pos,
-                end: self.pos + tok_end,
-            },
-        );
-        self.pos += tok_end;
+    pub fn token_and_advance(&mut self, kind: TokenKind, token_len: usize) -> Token {
+        let token = Token::new(kind, Span::new(self.pos, self.pos + token_len));
+        self.pos += token_len;
         token
     }
 
-    fn text(&self) -> &str {
-        &self.text[self.pos..]
+    fn count_bytes_until(&self, f: impl Fn(char) -> bool) -> usize {
+        self.text[self.pos..]
+            .chars()
+            .take_while(|x| f(*x))
+            .map(|x| x.len_utf8())
+            .sum()
+    }
+
+    fn skip_while(&mut self, f: impl Fn(char) -> bool) {
+        self.pos += self.count_bytes_until(f);
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.text[self.pos..].chars().next()
+    }
+
+    fn peek_str(&self, len: usize) -> Option<&str> {
+        self.text.get(self.pos..self.pos + len)
     }
 
     pub fn next(&mut self) -> Token {
-        let i: usize = self
-            .text()
-            .chars()
-            .take_while(|x| x.is_whitespace())
-            .map(|x| x.len_utf8())
-            .sum();
-        self.pos += i;
-        let Some(c) = self.text().chars().next() else {
+        self.skip_while(char::is_whitespace);
+        let Some(c) = self.peek() else {
             return Token::new(TokenKind::Eoi, Span::empty());
         };
         match c {
             x if x.is_alphabetic() => {
-                let i = self
-                    .text()
-                    .chars()
-                    .take_while(|x| x.is_alphabetic())
-                    .map(|x| x.len_utf8())
-                    .sum();
-                let kind = match &self.text()[..i] {
-                    "with" => TokenKind::KWWith,
+                let i = self.count_bytes_until(char::is_alphabetic);
+                let kind = match self.peek_str(i) {
+                    Some("with") => TokenKind::KWWith,
                     _ => TokenKind::Ident,
                 };
-                self.form_token(i, kind)
+                self.token_and_advance(kind, i)
             }
             x if x.is_ascii_digit() => {
-                let i = self
-                    .text()
-                    .chars()
-                    .take_while(|x| x.is_ascii_digit())
-                    .map(|x| x.len_utf8())
-                    .sum();
-                self.form_token(i, TokenKind::Number)
+                let i = self.count_bytes_until(|x| x.is_ascii_digit());
+                self.token_and_advance(TokenKind::Number, i)
             }
-            '+' => self.form_token(c.len_utf8(), TokenKind::Plus),
-            '-' => self.form_token(c.len_utf8(), TokenKind::Minus),
-            '*' => self.form_token(c.len_utf8(), TokenKind::Star),
-            '/' => self.form_token(c.len_utf8(), TokenKind::Slash),
-            '(' => self.form_token(c.len_utf8(), TokenKind::LParen),
-            ')' => self.form_token(c.len_utf8(), TokenKind::RParen),
-            ':' => self.form_token(c.len_utf8(), TokenKind::Colon),
-            ',' => self.form_token(c.len_utf8(), TokenKind::Comma),
-            _ => self.form_token(c.len_utf8(), TokenKind::Unknown),
+            _ => self.token_and_advance(
+                match c {
+                    '+' => TokenKind::Plus,
+                    '-' => TokenKind::Minus,
+                    '*' => TokenKind::Star,
+                    '/' => TokenKind::Slash,
+                    '(' => TokenKind::LParen,
+                    ')' => TokenKind::RParen,
+                    ':' => TokenKind::Colon,
+                    ',' => TokenKind::Comma,
+                    _ => TokenKind::Unknown,
+                },
+                c.len_utf8(),
+            ),
         }
     }
 }

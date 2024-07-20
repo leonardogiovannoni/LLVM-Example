@@ -18,4 +18,8 @@ impl Span {
     pub fn empty() -> Self {
         Span { begin: 0, end: 0 }
     }
+
+    pub fn new(begin: usize, end: usize) -> Self {
+        Span { begin, end }
+    }
 }
