@@ -8,6 +8,7 @@ pub struct Parser<'a> {
     pub has_error: bool,
 }
 
+#[derive(Debug)]
 pub struct ParseError;
 
 type PResult<T> = Result<T, ParseError>;
@@ -65,7 +66,7 @@ impl<'a> Parser<'a> {
                 vars.push(self.token.span);
                 self.advance();
                 while let TokenKind::Comma = self.token.kind {
-                    self.consume(TokenKind::Comma)?;
+                    self.consume(TokenKind::Comma).expect("token kind is not comma");
                     self.expect(TokenKind::Ident)?;
                     vars.push(self.token.span);
                     self.advance();
