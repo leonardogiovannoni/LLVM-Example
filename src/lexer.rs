@@ -16,9 +16,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-
-
-
     fn match_while(&mut self, start: usize, f: impl Fn(char) -> bool) -> (&'a str, usize) {
         let end;
         loop {
