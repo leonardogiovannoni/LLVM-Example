@@ -16,14 +16,17 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn match_identifier(&mut self, start: usize) -> (&'a str, usize) {
+
+
+
+    fn match_while(&mut self, start: usize, f: impl Fn(char) -> bool) -> (&'a str, usize) {
         let end;
         loop {
-            if let Some((i, ch)) = self.chars.peek() {
-                if ch.is_alphabetic() {
+            if let Some(&(i, ch)) = self.chars.peek() {
+                if f(ch) {
                     self.chars.next();
                 } else {
-                    end = *i;
+                    end = i;
                     break;
                 }
             } else {
@@ -34,22 +37,16 @@ impl<'a> Lexer<'a> {
         (&self.text[start..end], end)
     }
 
+    fn match_identifier(&mut self, start: usize) -> (&'a str, usize) {
+        self.match_while(start, |ch| ch.is_alphabetic())
+    }
+
     fn match_number(&mut self, start: usize) -> (&'a str, usize) {
-        let end;
-        loop {
-            if let Some((i, ch)) = self.chars.peek() {
-                if ch.is_ascii_digit() {
-                    self.chars.next();
-                } else {
-                    end = *i;
-                    break;
-                }
-            } else {
-                end = self.text.len();
-                break;
-            }
-        }
-        (&self.text[start..end], end)
+        self.match_while(start, |ch| ch.is_ascii_digit())
+    }
+
+    fn token(&self, kind: TokenKind, start: usize, end: usize) -> Token {
+        Token::new(kind, Span::new(start, end))
     }
 
     pub fn next(&mut self) -> Token {
@@ -58,19 +55,20 @@ impl<'a> Lexer<'a> {
                 Some((_, c)) if c.is_whitespace() => {
                     continue;
                 }
-                Some((i, c)) if c.is_alphabetic() => {
-                    let (ident, end) = self.match_identifier(i);
-                    break match ident {
-                        "with" => Token::new(TokenKind::KWWith, Span::new(i, end)),
-                        _ => Token::new(TokenKind::Ident, Span::new(i, end)),
+                Some((start, c)) if c.is_alphabetic() => {
+                    let (ident, end) = self.match_identifier(start);
+                    break if ident == "with" {
+                        self.token(TokenKind::KWWith, start, end)
+                    } else {
+                        self.token(TokenKind::Ident, start, end)
                     };
                 }
-                Some((i, c)) if c.is_ascii_digit() => {
-                    let (_, end) = self.match_number(i);
-                    break Token::new(TokenKind::Number, Span::new(i, end));
+                Some((start, c)) if c.is_ascii_digit() => {
+                    let (_, end) = self.match_number(start);
+                    break self.token(TokenKind::Number, start, end);
                 }
-                Some((i, c)) => {
-                    break Token::new(
+                Some((start, c)) => {
+                    break self.token(
                         match c {
                             '+' => TokenKind::Plus,
                             '-' => TokenKind::Minus,
@@ -82,11 +80,11 @@ impl<'a> Lexer<'a> {
                             ',' => TokenKind::Comma,
                             _ => TokenKind::Unknown,
                         },
-                        Span::new(i, i + c.len_utf8()),
+                        start,
+                        start + c.len_utf8(),
                     );
                 }
-
-                None => break Token::new(TokenKind::Eoi, Span::empty()),
+                None => break self.token(TokenKind::Eoi, self.text.len(), self.text.len()),
             };
         }
     }
