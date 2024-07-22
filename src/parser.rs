@@ -11,7 +11,7 @@ pub struct Parser<'a> {
 #[derive(Debug)]
 pub struct ParseError;
 
-type PResult<T> = Result<T, ParseError>;
+type ParseResult<T> = Result<T, ParseError>;
 
 impl<'a> Parser<'a> {
     pub fn new(lexer: Lexer<'a>) -> Self {
@@ -32,7 +32,7 @@ impl<'a> Parser<'a> {
         self.token = self.lexer.next();
     }
 
-    pub fn expect(&mut self, kind: TokenKind) -> PResult<()> {
+    pub fn expect(&mut self, kind: TokenKind) -> ParseResult<()> {
         if self.token.kind == kind {
             Ok(())
         } else {
@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn consume(&mut self, kind: TokenKind) -> PResult<()> {
+    pub fn consume(&mut self, kind: TokenKind) -> ParseResult<()> {
         if self.token.kind == kind {
             self.advance();
             Ok(())
@@ -57,8 +57,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse_calc(&mut self) -> PResult<Ast> {
-        (|| -> PResult<Ast> {
+    pub fn parse_calc(&mut self) -> ParseResult<Ast> {
+        (|| -> ParseResult<Ast> {
             let mut vars = Vec::new();
             if let TokenKind::KWWith = self.token.kind {
                 self.consume(TokenKind::KWWith)?;
@@ -89,7 +89,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub fn parse_expr(&mut self) -> PResult<Expr> {
+    pub fn parse_expr(&mut self) -> ParseResult<Expr> {
         let mut left = self.parse_term()?;
         while let TokenKind::Plus | TokenKind::Minus = self.token.kind {
             let op = match self.token.kind {
@@ -104,7 +104,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
-    pub fn parse_term(&mut self) -> PResult<Expr> {
+    pub fn parse_term(&mut self) -> ParseResult<Expr> {
         let mut left = self.parse_factor()?;
         while let TokenKind::Star | TokenKind::Slash = self.token.kind {
             let op = match self.token.kind {
@@ -119,8 +119,8 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
-    pub fn parse_factor(&mut self) -> PResult<Expr> {
-        (|| -> PResult<Expr> {
+    pub fn parse_factor(&mut self) -> ParseResult<Expr> {
+        (|| -> ParseResult<Expr> {
             if let TokenKind::Ident | TokenKind::Number = self.token.kind {
                 let x = match self.token.kind {
                     TokenKind::Ident => ValueKind::Ident,
