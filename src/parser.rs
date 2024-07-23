@@ -133,8 +133,7 @@ impl<'a> Parser<'a> {
                     TokenKind::Number => ValueKind::Number,
                     _ => unreachable!(),
                 };
-                let text = self.token.span;
-                let expr = Expr::Factor(Factor::new(x, text));
+                let expr = Expr::Factor(Factor::new(x, self.token.span));
                 self.advance();
                 Ok(expr)
             } else {
@@ -142,7 +141,6 @@ impl<'a> Parser<'a> {
                 let res = self.parse_expr();
                 self.consume(TokenKind::RParen)?;
                 res
-
             }
         })()
         .map_err(|_| {
