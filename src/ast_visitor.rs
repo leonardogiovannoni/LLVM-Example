@@ -1,4 +1,3 @@
-use crate::*;
 use inkwell::{
     builder::Builder,
     module::{Linkage, Module},
@@ -11,9 +10,19 @@ use std::{
     cell::{Cell, RefCell},
     collections::HashMap,
     fmt::Debug,
+    rc::Rc,
 };
 
 use anyhow::Result;
+use inkwell::context::Context;
+
+use crate::ast::AstTrait;
+use crate::BinaryOp;
+use crate::Factor;
+use crate::Operator;
+use crate::ValueKind;
+use crate::{Ast, Expr, WithDecl};
+use anyhow::bail;
 
 pub trait AstVisitorTrait<'a> {
     fn visit_with_decl(&self, ast: &WithDecl) -> Result<()>;

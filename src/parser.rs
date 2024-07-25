@@ -41,22 +41,21 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn try_consume(&mut self, token_kind: TokenKind) -> Result<(), ()> {
+    fn try_consume(&mut self, token_kind: TokenKind) -> bool {
         if self.token.kind == token_kind {
             self.advance();
-            Ok(())
+            true
         } else {
-            Err(())
+            false
         }
     }
 
     pub fn consume(&mut self, kind: TokenKind) -> ParseResult<()> {
-        match self.try_consume(kind) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                self.error();
-                Err(ParseError)
-            }
+        if self.try_consume(kind) {
+            Ok(())
+        } else {
+            self.error();
+            Err(ParseError)
         }
     }
 
@@ -69,11 +68,11 @@ impl<'a> Parser<'a> {
     pub fn parse_calc(&mut self) -> ParseResult<Ast> {
         (|| -> ParseResult<Ast> {
             let mut vars = Vec::new();
-            if let Ok(_) = self.try_consume(TokenKind::KWWith) {
+            if self.try_consume(TokenKind::KWWith) {
                 self.expect(TokenKind::Ident)?;
                 vars.push(self.token.span);
                 self.advance();
-                while let Ok(_) = self.try_consume(TokenKind::Comma) {
+                while self.try_consume(TokenKind::Comma) {
                     self.expect(TokenKind::Ident)?;
                     vars.push(self.token.span);
                     self.advance();

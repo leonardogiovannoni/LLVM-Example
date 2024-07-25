@@ -15,12 +15,9 @@ use crate::decl_check::*;
 use crate::lexer::*;
 use crate::parser::*;
 use crate::token::*;
-use anyhow::bail;
 use anyhow::Result;
 use debug_visitor::debug_ast;
-use inkwell::context::Context;
 use std::fmt::Debug;
-use std::rc::Rc;
 
 fn run(mut args: impl Iterator<Item = String>) -> Result<String> {
     let input = args.next().expect("no input");
