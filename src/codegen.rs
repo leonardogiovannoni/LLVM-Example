@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use inkwell::context::Context;
 
 use crate::{Ast, AstTrait, DeclCheck, ToIRVisitor};
@@ -17,7 +17,7 @@ impl<'a> Sema<'a> {
         let check = DeclCheck::new(self.text);
         ast.accept(&check)?;
         if check.has_error.get() {
-            Err(anyhow::anyhow!("Declaration error"))
+            bail!("Declaration error")
         } else {
             Ok(())
         }
@@ -25,19 +25,22 @@ impl<'a> Sema<'a> {
 }
 
 pub struct CodeGen<'a> {
-    ctx: &'a Context,
+    ctx: Context,
     text: &'a str,
 }
 
 impl<'a> CodeGen<'a> {
-    pub fn new(ctx: &'a Context, text: &'a str) -> Self {
-        CodeGen { ctx, text }
+    pub fn new(text: &'a str) -> Self {
+        CodeGen {
+            ctx: Context::create(),
+            text,
+        }
     }
 
     pub fn compile(&self, ast: Ast) -> Result<String> {
         let module = self.ctx.create_module("calc.expr");
         let module = Rc::new(module);
-        let to_ir = ToIRVisitor::new(self.ctx, Rc::clone(&module), self.text);
+        let to_ir = ToIRVisitor::new(&self.ctx, Rc::clone(&module), self.text);
         to_ir.run(&ast)?;
         Ok(module.print_to_string().to_string())
     }
