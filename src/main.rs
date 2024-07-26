@@ -44,6 +44,7 @@ fn main() {
 
 mod tests {
     use super::*;
+    use itertools::Itertools;
 
     #[test]
     fn test() {
@@ -101,28 +102,13 @@ mod tests {
             declare void @calc_write(i32)
         "#;
 
-        let tmp = run([input].into_iter());
-        match tmp {
-            Ok(s) => {
-                let s = s.trim();
-                let expected_output = expected_output.trim();
-                let s = s
-                    .split_whitespace()
-                    .map(|x| x.trim())
-                    .filter(|x| !x.is_empty())
-                    .collect::<String>()
-                    .replace("\n", "");
-                let expected_output = expected_output
-                    .split_whitespace()
-                    .map(|x| x.trim())
-                    .filter(|x| !x.is_empty())
-                    .collect::<String>()
-                    .replace("\n", "");
-                assert_eq!(s, expected_output);
-            }
-            Err(e) => {
-                panic!("error: {:?}", e);
-            }
+        fn normalize(s: &str) -> String {
+            s.split_whitespace().join(" ")
         }
+
+        let s = run([input].into_iter()).unwrap();
+        let s = normalize(&s);
+        let expected_output = normalize(expected_output);
+        assert_eq!(s, expected_output);
     }
 }
